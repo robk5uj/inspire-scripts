@@ -1,0 +1,11 @@
+ <record>
+        <controlfield tag="001">2879</controlfield>
+        <datafield tag="FFT" ind1=" " ind2=" ">
+            <subfield code="a">/Users/osso/Doocuments/914659.pdf</subfield>
+            <subfield code="t">Main</subfield>
+            <subfield code="d">
+              This is the fulltext version of my thesis in the PDF format.
+              Chapter 5 still needs some revision.
+            </subfield>
+        </datafield>
+    </record>
