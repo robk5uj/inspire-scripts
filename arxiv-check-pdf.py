@@ -5,7 +5,7 @@ import time
 from urllib import urlretrieve
 from shutil import copyfile
 
-from invenio.search_engine import search_pattern
+from invenio.search_engine import search_pattern, search_unit
 from invenio.search_engine_utils import get_fieldvalues
 from invenio.bibdocfile import BibRecDocs, InvenioWebSubmitFileError
 
@@ -36,18 +36,13 @@ def look_for_fulltext(recid):
     rec_info = BibRecDocs(recid)
     docs = rec_info.list_bibdocs()
 
-    path = None
-    bibdoc = None
     for doc in docs:
-        for extension in ['pdf', 'pdfa', 'PDF']:
-            try:
-                path = doc.get_file(extension).get_full_path()
-                bibdoc = doc
-                break
-            except InvenioWebSubmitFileError:
-                pass
-
-    return bibdoc, path
+        for d in doc.list_all_files():
+            if d.get_format().strip('.') in ['pdf', 'pdfa', 'PDF']:
+                try:
+                    yield doc, d
+                except InvenioWebSubmitFileError:
+                    pass
 
 
 def shellquote(s):
@@ -66,9 +61,7 @@ if __name__ == '__main__':
     verbose = '-v' in sys.argv
 
     recids = search_pattern(p='arxiv', f='reportnumber')
-    # recids = [877748]
-    # recids = [1110769]
-    # recids = [1107930]
+    # recids = search_unit(p='DELETED', f='980', m='a')
 
     to_fix = set()
 
@@ -79,37 +72,39 @@ if __name__ == '__main__':
         if verbose:
             print 'processing', recid
 
-        doc, path = look_for_fulltext(recid)
-        # print repr(path)
-        if path and not check_pdf(path):
-            print 'invalid pdf for', recid
-            print 'path', path
-            doc.expunge()
-            continue
+        for doc, docfile in look_for_fulltext(recid):
+            path = docfile.get_full_path()
+            if not check_pdf(path):
+                print 'invalid pdf for', recid
+                print 'path', path
+                doc.delete_file(docfile.get_format(), docfile.get_version())
+                if not doc.list_all_files():
+                    doc.expunge()
+                continue
 
-            print 'fetching pdf for', recid
+                print 'fetching pdf for', recid
 
-            for arxiv_id in extract_arxiv_ids_from_recid(recid):
-                url = build_arxiv_url(arxiv_id)
-                print 'downloading', url
-                try:
-                    filename, dummy = urlretrieve(url)
-                except IOError, e:
-                    print 'exception', repr(e)
-                    continue
-                try:
-                    if check_pdf(filename):
-                        print 'copying', filename, 'to', path
-                        copyfile(filename, path)
-                        break
-                    else:
-                        print 'invalid pdf for', recid
-                        print 'path', path
-                        doc.expunge()
+                for arxiv_id in extract_arxiv_ids_from_recid(recid):
+                    url = build_arxiv_url(arxiv_id)
+                    print 'downloading', url
+                    try:
+                        filename, dummy = urlretrieve(url)
+                    except IOError, e:
+                        print 'exception', repr(e)
+                        continue
+                    try:
+                        if check_pdf(filename):
+                            print 'copying', filename, 'to', path
+                            copyfile(filename, path)
+                            break
+                        else:
+                            print 'invalid pdf for', recid
+                            print 'path', path
+                            doc.expunge()
 
-                        to_fix.add(recid)
-                finally:
-                    os.unlink(filename)
-            time.sleep(10)
+                            to_fix.add(recid)
+                    finally:
+                        os.unlink(filename)
+                time.sleep(10)
 
 print 'to_fix', repr(to_fix)
