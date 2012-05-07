@@ -1,0 +1,279 @@
+ <record>
+    <controlfield tag="001">1091122</controlfield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">1</subfield>
+        <subfield code="s">PHRVA,D42,3613</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">2</subfield>
+        <subfield code="s">APHYE,7,263</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">3</subfield>
+        <subfield code="s">APHYE,23,377</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">4</subfield>
+        <subfield code="s">APHYE,13,1</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">5</subfield>
+        <subfield code="r">ARXIV:0910.1269</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">6</subfield>
+        <subfield code="s">APHYE,31,277</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">7</subfield>
+        <subfield code="r">ASTRO-PH 9907432</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">8</subfield>
+        <subfield code="s">00462,136,022047</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">9</subfield>
+        <subfield code="s">APHYE,33,86</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">10</subfield>
+        <subfield code="s">APHYE,13,127</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">11</subfield>
+        <subfield code="r">ARXIV:0812.4886</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">12</subfield>
+        <subfield code="s">PANUE,72,1537</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">13</subfield>
+        <subfield code="s">APHYE,24,1</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">14</subfield>
+        <subfield code="s">APHYE,29,188</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">15</subfield>
+        <subfield code="s">SPHJA,60,10</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">16</subfield>
+        <subfield code="s">APHYE,19,193</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">17</subfield>
+        <subfield code="r">ANTARES-PHYS-2009-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">18</subfield>
+        <subfield code="s">PHRVA,D58,054001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">19</subfield>
+        <subfield code="r">FZKA-6019</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">20</subfield>
+        <subfield code="s">YAFIA,56,105</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">21</subfield>
+        <subfield code="s">PHRVA,D50,5710</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">22</subfield>
+        <subfield code="r">ANTARES-PHYS-2009-003</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">23</subfield>
+        <subfield code="s">APHYE,7,357</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">24</subfield>
+        <subfield code="s">PHRVA,D40,2163</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">25</subfield>
+        <subfield code="s">ZEPYA,C48,221</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">26</subfield>
+        <subfield code="s">PHRVA,D52,3793</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">27</subfield>
+        <subfield code="s">PHRVA,D58,092005</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">28</subfield>
+        <subfield code="r">ARXIV:0902.0021</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">29</subfield>
+        <subfield code="r">ANTARES-PHYS-2009-007</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">30</subfield>
+        <subfield code="s">CPHCB,179,915</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">31</subfield>
+        <subfield code="s">APHYE,25,1</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">32</subfield>
+        <subfield code="s">APHYE,2,393</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">33</subfield>
+        <subfield code="s">APHYE,23,131</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">34</subfield>
+        <subfield code="s">NUIMA,A484,369</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">35</subfield>
+        <subfield code="s">NUIMA,A555,132</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">36</subfield>
+        <subfield code="r">ANTARES-OPMO-1998-002</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">37</subfield>
+        <subfield code="r">ANTARES-OPMO-2007-003</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">38</subfield>
+        <subfield code="r">ANTARES-OPMO-2008-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">39</subfield>
+        <subfield code="r">ANTARES-PHYS-2007-002</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">40</subfield>
+        <subfield code="r">ANTARES-OPMO-2009-003</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">41</subfield>
+        <subfield code="s">NUIMA,A622,59</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">42</subfield>
+        <subfield code="s">NUIMA,A570,107</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">43</subfield>
+        <subfield code="s">NUIMA,A578,498</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">44</subfield>
+        <subfield code="r">ANTARES-SOFT-2005-005</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">45</subfield>
+        <subfield code="r">ANTARES-SOFT-2002-008</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">46</subfield>
+        <subfield code="r">ANTARES-SOFT-2004-004</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">47</subfield>
+        <subfield code="r">ARXIV:0908.0816</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">48</subfield>
+        <subfield code="r">ANTARES-SOFT-2006-004</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">49</subfield>
+        <subfield code="s">APHYE,19,253</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">50</subfield>
+        <subfield code="s">NUIMA,A581,695</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">51</subfield>
+        <subfield code="s">APHYE,26,314</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">52</subfield>
+        <subfield code="r">ARXIV:1009.4179</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">53</subfield>
+        <subfield code="r">ANTARES-SITE-1999-002</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">54</subfield>
+        <subfield code="r">ANTARES-OPMO-1999-002</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">55</subfield>
+        <subfield code="r">ANTARES-PHYS-2006-005</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">56</subfield>
+        <subfield code="r">ANTARES-PHYS-2008-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">57</subfield>
+        <subfield code="r">ANTARES-PHYS-2006-007</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">58</subfield>
+        <subfield code="r">ANTARES-OPMO-2000-009</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">59</subfield>
+        <subfield code="r">ANTARES-PHYS-2006-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">60</subfield>
+        <subfield code="r">ANTARES-SITE-2010-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">61</subfield>
+        <subfield code="r">ANTARES-OPMO-2009-003</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">62</subfield>
+        <subfield code="r">ANTARES-PHYS-2008-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">63</subfield>
+        <subfield code="r">ANTARES-SOFT-2009-001</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">64</subfield>
+        <subfield code="r">ARXIV:0911.3055</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">65</subfield>
+        <subfield code="r">ANTARES-PHYS-2009-003</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">66</subfield>
+        <subfield code="r">ANTARES-SOFT-2007-016</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">67</subfield>
+        <subfield code="r">ANTARES-SOFT-2008-009</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">68</subfield>
+        <subfield code="r">ANTARES-PHYS-2009-012</subfield>
+    </datafield>
+    <datafield tag="999" ind1="C" ind2="5">
+        <subfield code="o">69</subfield>
+        <subfield code="r">ANTARES-SOFT-2009-012</subfield>
+    </datafield>
+</record>
