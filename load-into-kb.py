@@ -1,5 +1,7 @@
 import sys
-from invenio.dbquery import run_sql
+
+from invenio.bibknowledge import add_kb_mapping
+from invenio.refextract_re import re_kb_line
 
 
 def load_kb_from_file(path, builder):
@@ -35,11 +37,19 @@ def load_kb_from_file(path, builder):
         fh.close()
 
 
-def db_saver(name, kb):
+def db_saver(kb_name, kb):
     for key, value in kb:
-        run_sql('INSERT INTO knwKBRVAL (m_key,m_value,id_knwKB) VALUES (%s, %s, %s);', )
+        add_kb_mapping(kb_name, key, value)
+
+def usage():
+    print >> sys.stderr, "Usage load-into-kb.py kb_name file.kb"
 
 if __name__ == '__main__':
-    for path in sys.argv[1:]:
+    if len(sys.argv) < 3:
+        usage()
+        sys.exit(1)
+    kb_name = sys.argv[1]
+
+    for path in sys.argv[2:]:
         print 'Loading kb %s' % path
-        load_kb_from_file(path, db_saver)
+        load_kb_from_file(path, lambda kb: db_saver(kb_name, kb))
