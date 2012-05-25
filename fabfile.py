@@ -123,12 +123,12 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
         executed_commands = perform_deploy(cmd_filename, repodir)
         choice = prompt("Do you want to run these commands more hosts? (One of: %s)" % \
                        (', '.join(env.roledefs.keys()),), default=default)
-        if choice and choice in env.roledefs:
+        if choice != 'no' and choice in env.roledefs:
             # For every host in defined role, perform deploy
             for host in env.roledefs[choice]:
                 with settings(host_string=host):
                     perform_deploy(cmd_filename, repodir)
-            default = None
+            default = 'no'
         else:
             break
 
