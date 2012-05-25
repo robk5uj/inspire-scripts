@@ -36,6 +36,7 @@ env.roledefs = {
     'prod': ['pcudssw1506'],
     'prod_aux': ['pcudssw1507', 'pcudssx1506', 'pcudssw1504']
 }
+env.dopull = False
 
 
 @task
@@ -91,6 +92,13 @@ def inspire():
     env.repodir = run("echo $CFG_INSPIRE_SRCDIR")
 
 
+@task
+def pull():
+    """
+    Pull changes into checked out branch
+    """
+    env.dopull = True
+
 # MAIN TASKS
 
 @task
@@ -112,6 +120,9 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
     # Checkout remote version of the given branch for deployment
     if branch:
         ready_branch(repodir, branch)
+
+    if env.dopull:
+        pull_changes(repodir)
 
     # Prepare list of commands to run
     out = _get_recipe(repodir, recipeargs, commitid)
@@ -203,6 +214,11 @@ def ready_branch(repodir, branch):
     """
     with cd(repodir):
         run("git checkout %s" % (branch,))
+
+
+def pull_changes(repodir):
+    with cd(repodir):
+        run("git pull")
 
 
 def ready_command_file(out):
