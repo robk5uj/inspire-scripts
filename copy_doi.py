@@ -1,7 +1,9 @@
 from tempfile import mkstemp
 import os
+import time
 
 from invenio.config import CFG_TMPDIR
+from invenio.dbquery import run_sql
 from invenio.bibtask import task_low_level_submission
 from invenio.search_engine_utils import get_fieldvalues
 from invenio.search_engine import perform_request_search
@@ -21,14 +23,21 @@ def submit_task(to_update):
     temp_file.write('</collection>')
     temp_file.close()
 
-    task_low_level_submission('bibupload', 'copy-doi', '-P', '5',
-                              '-c', temp_path, '--notimechange')
+    return task_low_level_submission('bibupload', 'copy-doi', '-P', '5',
+                                     '-a', temp_path, '--notimechange')
+
+
+def wait_for_task(task_id):
+    sql = 'select status from schTASK where id = %s'
+    while run_sql(sql, [task_id])[0][0] != 'DONE':
+        time.sleep(5)
 
 
 def submit_bibindex_task(to_update):
     recids = [str(r) for r in to_update]
-    task_low_level_submission('bibindex', 'copy-doi', '-w', 'doi',
-                              '-i', ','.join(recids))
+    return task_low_level_submission('bibindex', 'copy-doi', '-w', 'doi',
+                                     '-i', ','.join(recids))
+
 
 def create_our_record(recid, dois):
     record = {}
@@ -62,9 +71,12 @@ def main():
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
-        if len(to_update) == 25:
-            submit_task(to_update)
-            submit_bibindex_task(to_update_recids)
+        if len(to_update) == 1000:
+            task_id = submit_task(to_update)
+            print 'submitted task id %s' % task_id
+            wait_for_task(task_id)
+            # task_id = submit_bibindex_task(to_update_recids)
+            # wait_for_task(task_id)
             to_update = []
             to_update_recids = []
 
