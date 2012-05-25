@@ -10,7 +10,7 @@ from invenio.mailutils import send_email
 from invenio.config import CFG_SITE_ADMIN_EMAIL
 
 CFG_LINES_TO_IGNORE = ("#",)
-CFG_CMDDIR = "/tmp"
+CFG_CMDDIR = os.environ.get('TMPDIR', '/tmp')
 CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 CFG_LOG_EMAIL = "admin@inspirehep.net"
 CFG_REPODIR = None
