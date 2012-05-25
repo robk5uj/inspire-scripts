@@ -7,11 +7,11 @@ import time
 import re
 
 from invenio.mailutils import send_email
-
+from invenio.config import CFG_SITE_ADMIN_EMAIL
 
 CFG_LINES_TO_IGNORE = ("#",)
 CFG_CMDDIR = "/tmp"
-CFG_FROM_EMAIL = "adeiana@cern.ch"
+CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 CFG_LOG_EMAIL = "admin@inspirehep.net"
 CFG_REPODIR = None
 CFG_INVENIO_DEPLOY_RECIPE = "/afs/cern.ch/project/inspire/repo/invenio-create-deploy-recipe"
