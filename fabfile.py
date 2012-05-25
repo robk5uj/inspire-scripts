@@ -1,6 +1,11 @@
 import os
 import sys
-from fabric.api import *
+from fabric.api import run, \
+                       task, \
+                       env, \
+                       settings, \
+                       local, \
+                       cd
 from fabric.operations import prompt
 from tempfile import mkstemp
 import time
