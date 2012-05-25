@@ -5,7 +5,8 @@ from fabric.api import run, \
                        env, \
                        settings, \
                        local, \
-                       cd
+                       cd, \
+                       sudo
 from fabric.operations import prompt
 from tempfile import mkstemp
 import time
@@ -29,12 +30,11 @@ else:
     print("ERROR: NO EDITOR/VISUAL variable found. Exiting.")
     sys.exit(1)
 
-
 env.roledefs = {
-    'dev': ['pcudssw1508'],
-    'test': ['pcudssw1505'],
-    'prod': ['pcudssw1506'],
-    'prod_aux': ['pcudssw1507', 'pcudssx1506', 'pcudssw1504']
+    'dev': ['pcudssw1508.cern.ch'],
+    'test': ['pcudssw1505.cern.ch'],
+    'prod': ['pcudssw1506.cern.ch'],
+    'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch']
 }
 env.dopull = False
 
@@ -118,8 +118,7 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
             sys.exit(1)
 
     # Checkout remote version of the given branch for deployment
-    if branch:
-        ready_branch(repodir, branch)
+    ready_branch(repodir, branch)
 
     if env.dopull:
         pull_changes(repodir)
@@ -137,7 +136,7 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
     # Users can also run the commands on other hosts right away
     while True:
         executed_commands = perform_deploy(cmd_filename, repodir)
-        choice = prompt("Do you want to run these commands more hosts? (One of: %s)" % \
+        choice = prompt("Run these commands more hosts? (One of: %s)" % \
                        (', '.join(env.roledefs.keys()),), default=default)
         if choice != 'no' and choice in env.roledefs:
             # For every host in defined role, perform deploy
@@ -149,7 +148,7 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
             break
 
     # Logging?
-    choice = prompt("Do you want to log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
+    choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
     if choice.lower() in ["y", "ye", "yes"]:
         log_text = out.split("#+END_EXAMPLE")[0]
         log_filename = _safe_mkstemp()
@@ -171,13 +170,14 @@ def perform_deploy(cmd_filename, repodir=None):
             print("Error: No repodir")
             sys.exit(1)
 
-    choice = prompt("Do you want to edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
+    choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
     if choice.lower() in ["y", "ye", "yes"]:
         local("%s %s" % (CFG_EDITOR, cmd_filename))
 
+    print("--- COMMANDS TO RUN ---:")
     local("cat %s" % (cmd_filename,))
     print
-    choice = prompt("Do you want to run these commands on %s? (Y/n)" % (env.host_string,), default="yes")
+    choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string,), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
         sys.exit(1)
 
@@ -290,7 +290,13 @@ def _run_command(directory, command):
     """
     with cd(directory):
         if command and not command.startswith(CFG_LINES_TO_IGNORE):
-            run(command)
+            match = re.match("sudo -u ([a-z]+) (.*)", command)
+            if match:
+                sudo(match.group(2), user=match.group(1))
+            elif command.startswith('sudo'):
+                sudo(command[5:])
+            else:
+                run(command)
         if command.startswith(('colordiff', 'diff')):
             prompt("Press Enter to continue..")
 
