@@ -71,7 +71,7 @@ def main():
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
-        if len(to_update) == 1000:
+        if len(to_update) == 1000 or done + 1 == len(recids) and len(to_update) > 0:
             task_id = submit_task(to_update)
             print 'submitted task id %s' % task_id
             wait_for_task(task_id)
