@@ -36,7 +36,7 @@ env.roledefs = {
     'prod': ['pcudssw1506.cern.ch'],
     'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch']
 }
-env.dopull = False
+env.fetch = "origin"
 
 
 @task
@@ -93,11 +93,11 @@ def inspire():
 
 
 @task
-def pull():
+def repo(repo):
     """
     Pull changes into checked out branch
     """
-    env.dopull = True
+    env.fetch = repo
 
 # MAIN TASKS
 
@@ -118,10 +118,7 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
             sys.exit(1)
 
     # Checkout remote version of the given branch for deployment
-    ready_branch(repodir, branch)
-
-    if env.dopull:
-        pull_changes(repodir)
+    ready_branch(repodir, branch, env.fetch)
 
     # Prepare list of commands to run
     out = _get_recipe(repodir, recipeargs, commitid)
@@ -208,18 +205,21 @@ def reset_apache():
     run("sudo /etc/init.d/httpd graceful")
 
 
-def ready_branch(repodir, branch):
+def ready_branch(repodir, branch, repo):
     """
     Connect to hosts and checkout given branch in given
     repository.
     """
+
     with cd(repodir):
-        run("git checkout %s" % (branch,))
+        if repo:
+            run("git fetch %s" % repo)
+        run("git reset --hard %s/%s" % (repo, branch))
 
 
-def pull_changes(repodir):
+def pull_changes(repodir, repo, branch):
     with cd(repodir):
-        run("git pull")
+        run("git fetch %s && git reset --hard %s/%s" % (repo, repo, branch))
 
 
 def ready_command_file(out):
