@@ -288,17 +288,23 @@ def _run_command(directory, command):
     If the command begins with a diff-like program, a prompt
     is given in order to allow for user inspection.
     """
-    with cd(directory):
-        if command and not command.startswith(CFG_LINES_TO_IGNORE):
-            match = re.match("sudo -u ([a-z]+) (.*)", command)
-            if match:
+    if command and not command.startswith(CFG_LINES_TO_IGNORE):
+        match = re.match("sudo -u ([a-z]+) (.*)", command)
+        if match:
+            with cd(directory):
                 sudo(match.group(2), user=match.group(1))
-            elif command.startswith('sudo'):
-                sudo(command[5:])
-            else:
+        elif command.startswith('sudo'):
+            sudo(command[5:], shell=False)
+        elif command.startswith('cd'):
+            # ignore cause cd doesn't work with run
+            # but we should already be wrapped
+            # with a "with cd()" context manager
+            pass
+        else:
+            with cd(directory):
                 run(command)
-        if command.startswith(('colordiff', 'diff')):
-            prompt("Press Enter to continue..")
+    if command.startswith(('colordiff', 'diff')):
+        prompt("Press Enter to continue..")
 
 
 def _get_recipe(repodir, recipeargs, commitid=""):
