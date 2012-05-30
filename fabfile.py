@@ -131,11 +131,12 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
         print("ERROR: No command file")
         sys.exit(1)
 
+    executed_commands = perform_deploy(cmd_filename, repodir)
+
     default = "prod_aux"
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     while True:
-        executed_commands = perform_deploy(cmd_filename, repodir)
         choice = prompt("Run these commands more hosts? (One of: %s)" % \
                        (', '.join(env.roledefs.keys()),), default=default)
         if choice != 'no' and choice in env.roledefs:
