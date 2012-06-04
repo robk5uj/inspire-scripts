@@ -46,6 +46,7 @@ def dev():
     """
     env.hosts = env.roledefs['dev']
     env.dolog = False
+    env.branch = "rebased-2012-03-07-DEV-INSTANCE"
 
 
 @task
@@ -55,6 +56,7 @@ def test():
     """
     env.hosts = env.roledefs['test']
     env.dolog = False
+    env.branch = "rebased-2012-03-07-TEST-INSTANCE"
 
 
 @task
@@ -130,7 +132,10 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
 
     executed_commands = perform_deploy(cmd_filename, repodir)
 
-    default = "prod_aux"
+    if env.hosts == env.roledefs['prod']:
+        default = "prod_aux"
+    else:
+        default = "no"
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     while True:
@@ -146,11 +151,12 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
             break
 
     # Logging?
-    choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
-    if choice.lower() in ["y", "ye", "yes"]:
-        log_text = out.split("#+END_EXAMPLE")[0]
-        log_filename = _safe_mkstemp()
-        log_deploy(log_filename, executed_commands, log_text, CFG_LOG_EMAIL)
+    if env.dolog:
+        choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
+        if choice.lower() in ["y", "ye", "yes"]:
+            log_text = out.split("#+END_EXAMPLE")[0]
+            log_filename = _safe_mkstemp()
+            log_deploy(log_filename, executed_commands, log_text, CFG_LOG_EMAIL)
 
 
 @task
