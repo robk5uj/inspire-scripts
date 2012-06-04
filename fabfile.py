@@ -36,7 +36,7 @@ env.roledefs = {
     'prod': ['pcudssw1506.cern.ch'],
     'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch']
 }
-env.fetch = "origin"
+env.fetch = None
 
 
 @task
