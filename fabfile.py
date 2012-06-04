@@ -6,7 +6,9 @@ from fabric.api import run, \
                        settings, \
                        local, \
                        cd, \
-                       sudo
+                       sudo, \
+                       lcd
+
 from fabric.operations import prompt
 from tempfile import mkstemp
 import time
@@ -36,7 +38,19 @@ env.roledefs = {
     'prod': ['pcudssw1506.cern.ch'],
     'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch']
 }
+
+env.branch = ""
 env.fetch = None
+env.repodir = ""
+env.dolog = True
+
+
+@task
+def origin():
+    """
+    Activate origin fetching-
+    """
+    env.fetch = "origin"
 
 
 @task
@@ -75,8 +89,6 @@ def prod_aux():
     Activate configuration for INSPIRE PROD aux servers.
     """
     env.hosts = env.roledefs['prod_aux']
-    env.dolog = True
-
 
 @task
 def ops():
@@ -102,25 +114,81 @@ def repo(repo):
     env.fetch = repo
 
 # MAIN TASKS
+@task
+def makeinstall():
+    """
+    TODO: Implement this recipe
+
+    On every individual worker node:
+
+    #+BEGIN_SRC sh
+    sudo -u %(apache)s /usr/bin/id
+    cd %(repodir1)s
+    git pull
+    make -s
+    sudo -u %(apache)s make install
+    sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg --update-all
+    sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
+    cd %(repodir2)s
+    git pull
+    sudo -u %(apache)s make install
+    #+END_SRC
+
+    On DEV, uglify interface:
+
+    #+BEGIN_SRC sh
+    sudo -u %(apache)s make reset-ugly-ui
+    #+END_SRC
+
+    On TEST, uglify interface like this:
+
+    #+BEGIN_SRC sh
+    sudo -u %(apache)s make reset-ugly-ui
+    sudo -u %(apache)s cp webstyle/inspire_logo_beta_ugly_test.png \
+         %(prefixdir)s/var/www/img/inspire_logo_beta.png
+    #+END_SRC
+
+    Now restart Apache:
+
+    #+BEGIN_SRC sh
+    sudo /etc/init.d/httpd restart
+    #+END_SRC
+
+    Note that on PROD we have higher safety for =dbexec= which is to be
+    reset now:
+
+    #+BEGIN_SRC sh
+    sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
+    sudo chmod go-rxw %(prefixdir)s/bin/dbexec*
+    sudo chown root.root %(prefixdir)s/bin/dbexec*
+    ls -l %(prefixdir)s/bin/dbexec*
+    #+END_SRC
+
+    Also on PROD the bibsched rights on the second worker node should be
+    revoked:
+
+    #+BEGIN_SRC sh
+    sudo chmod a-rwx %(prefixdir)s/bin/bibsched
+    ls -l %(prefixdir)s/bin/bibsched
+    #+END_SRC
+    """
+    return "No way yet!"
+
 
 @task
-def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pull --via-filecopy", repodir=None):
+def deploy(branch=env.branch, commitid="", recipeargs="--inspire --use-source --no-pull --via-filecopy", repodir=env.repodir):
     """
     Do a deployment in given repository using any commitid
     and recipe arguments given.
     """
-    if not branch:
-        branch = env.branch
-
     if not repodir:
-        if 'repodir' in env and env.repodir:
-            repodir = env.repodir
-        else:
+        repodir = env.repodir
+        if not repodir:
             print("Error: No repodir")
             sys.exit(1)
 
-    # Checkout remote version of the given branch for deployment
-    ready_branch(repodir, branch, env.fetch)
+    # Prepare remote version of the given branch for deployment
+    ready_branch(branch, repodir)
 
     # Prepare list of commands to run
     out = _get_recipe(repodir, recipeargs, commitid)
@@ -160,7 +228,7 @@ def deploy(branch=None, commitid="", recipeargs="--inspire --use-source --no-pul
 
 
 @task
-def perform_deploy(cmd_filename, repodir=None):
+def perform_deploy(cmd_filename, repodir=env.repodir):
     """
     Given a path to a file with commands, this function will run
     each command on the remote host in the given directory, line by line.
@@ -168,18 +236,16 @@ def perform_deploy(cmd_filename, repodir=None):
     Returns a list of executed commands.
     """
     if not repodir:
-        if 'repodir' in env and env.repodir:
-            repodir = env.repodir
-        else:
-            print("Error: No repodir")
-            sys.exit(1)
+        print("Error: No repodir")
+        sys.exit(1)
 
     choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
     if choice.lower() in ["y", "ye", "yes"]:
         local("%s %s" % (CFG_EDITOR, cmd_filename))
 
     print("--- COMMANDS TO RUN ---:")
-    local("cat %s" % (cmd_filename,))
+    with open(cmd_filename) as filecontent:
+        print filecontent.read()
     print
     choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string,), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
@@ -199,6 +265,30 @@ def perform_deploy(cmd_filename, repodir=None):
 
 
 @task
+def check_branch(old_branch, new_branch, runlocal=False, repodir=env.repodir):
+    """
+    Run a kwalitee check of the files to be deployed. May be run locally.
+    """
+    if not repodir:
+        print("Error: No repodir")
+        sys.exit(1)
+
+    if runlocal:
+        run_func = local
+        cd_func = lcd
+    else:
+        run_func = run
+        cd_func = cd
+
+    with cd_func(repodir):
+        files_to_check = run_func("git log %s..%s --pretty=format: --name-only | grep '\.py'" %
+                                  (old_branch, new_branch))
+        for filepath in files_to_check.split('\n'):
+            run_func("python $CFG_INVENIO_SRCDIR/modules/miscutil/lib/kwalitee.py --check-all %s" %
+                    (filepath,))
+
+
+@task
 def host_type():
     """
     Check host type of remote hosts. Used for tests.
@@ -211,12 +301,12 @@ def reset_apache():
     run("sudo /etc/init.d/httpd graceful")
 
 
-def ready_branch(repodir, branch, repo):
+@task
+def ready_branch(branch=env.branch, repodir=env.repodir, repo=env.fetch):
     """
     Connect to hosts and checkout given branch in given
     repository.
     """
-
     with cd(repodir):
         if repo:
             run("git fetch %s" % repo)
@@ -224,7 +314,11 @@ def ready_branch(repodir, branch, repo):
         run("git reset --hard %s" % branch)
 
 
-def pull_changes(repodir, repo, branch):
+@task
+def pull_changes(branch=env.branch, repodir=env.repodir, repo=env.fetch):
+    """
+    Fetches from given repo and resets HEAD to the given branch in the repo.
+    """
     with cd(repodir):
         run("git fetch %s && git reset --hard %s/%s" % (repo, repo, branch))
 
