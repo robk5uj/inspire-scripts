@@ -221,7 +221,7 @@ def ready_branch(repodir, branch, repo):
         if repo:
             run("git fetch %s" % repo)
             branch = "%s/%s" % (repo, branch)
-        run("git reset --hard " % branch)
+        run("git reset --hard %s" % branch)
 
 
 def pull_changes(repodir, repo, branch):
