@@ -115,7 +115,7 @@ def repo(repo):
 
 # MAIN TASKS
 @task
-def makeinstall():
+def makeinstall(opsbranch=env.branch, inspirebranch="master"):
     """
     TODO: Implement this recipe
 
@@ -172,7 +172,101 @@ def makeinstall():
     ls -l %(prefixdir)s/bin/bibsched
     #+END_SRC
     """
-    return "No way yet!"
+    # Prepare branches in the two repos
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
+    ready_branch(opsbranch, invenio_srcdir)
+
+    inspire_srcdir = run("echo $CFG_INSPIRE_SRCDIR")
+    ready_branch(inspirebranch, inspire_srcdir)
+
+    prefixdir = run("echo $CFG_INVENIO_SRCDIR")
+    apacheuser = run("echo $CFG_INVENIO_USER")
+
+    config_cmd = "aclocal-1.9 && automake-1.9 -a && autoconf && ./configure prefix=%s" % (prefixdir,)
+
+    recipe_text = """
+    #+BEGIN_SRC sh
+    sudo -u %(apache)s /usr/bin/id
+    cd %(opsdir)s
+    %(conf)s
+    make -s
+    sudo -u %(apache)s make install
+    """ % {'apache': apacheuser,
+           'opsdir': invenio_srcdir,
+           'conf': config_cmd}
+
+    if env.hosts == env.roledefs['prod'] or env.hosts == env.roledefs['prod_aux']:
+        recipe_text += """
+        sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg ----update-config-py --update-dbquery-py
+        sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
+        sudo chmod go-rxw %(prefixdir)s/bin/dbexec*
+        sudo chown root.root %(prefixdir)s/bin/dbexec*
+        ls -l %(prefixdir)s/bin/dbexec*
+        """ % {'apache': apacheuser,
+               'prefixdir': prefixdir}
+        if env.hosts == env.roledefs['prod_aux']:
+            recipe_text += """
+            sudo chmod a-rwx %(prefixdir)s/bin/bibsched
+            ls -l %(prefixdir)s/bin/bibsched
+            """ % {'prefixdir': prefixdir}
+    else:
+        recipe_text += "sudo -u %s %s/bin/inveniocfg ----update-all" % (apacheuser, prefixdir)
+
+    recipe_text += """
+    cd %(inspiredir)s
+    sudo -u %(apache)s make install
+    """ % {'apache': apacheuser,
+           'opsdir': invenio_srcdir,
+           'prefixdir': prefixdir,
+           'conf': config_cmd,
+           'inspiredir': inspire_srcdir}
+
+    if env.hosts == env.roledefs['dev']:
+        recipe_text += "sudo -u %s make reset-ugly-ui" % (apacheuser,)
+
+    recipe_text += "sudo /etc/init.d/httpd restart\n#+END_SRC"
+
+    print recipe_text
+
+    cmd_filename = ready_command_file(recipe_text)
+    if not cmd_filename:
+        print("ERROR: No command file")
+        sys.exit(1)
+
+    hosts_touched = env.hosts
+    executed_commands = perform_deploy(cmd_filename, invenio_srcdir)
+    if env.hosts == env.roledefs['prod']:
+        default = "prod_aux"
+    else:
+        default = "no"
+    # Run commands (allowing user to edit them beforehand)
+    # Users can also run the commands on other hosts right away
+    while True:
+        choice = prompt("Run these commands more hosts? (One of: %s)" % \
+                       (', '.join(env.roledefs.keys()),), default=default)
+        if choice != 'no' and choice in env.roledefs:
+            # For every host in defined role, perform deploy
+            for host in env.roledefs[choice]:
+                hosts_touched.append(host)
+                with settings(host_string=host):
+                    perform_deploy(cmd_filename, invenio_srcdir)
+            default = 'no'
+        else:
+            break
+
+    # Logging?
+    if env.dolog:
+        choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
+        if choice.lower() in ["y", "ye", "yes"]:
+            log_text = """
+Upgraded %(hosts)s to latest git master sources (using make).
+
+First, wait for bibsched jobs to stop and put the queue to manual mode
+(on the first worker node).  Then run upgrade in the following way:
+            """ % {"hosts": ", ".join(hosts_touched)}
+
+            log_filename = _safe_mkstemp()
+            log_deploy(log_filename, executed_commands, log_text, CFG_LOG_EMAIL)
 
 
 @task
