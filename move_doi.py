@@ -27,7 +27,7 @@ def submit_task(to_submit, mode):
     temp_file.write('</collection>')
     temp_file.close()
 
-    return task_low_level_submission('bibupload', 'copy-doi', '-P', '5',
+    return task_low_level_submission('bibupload', 'copy-doi', '-P', '3',
                                      '-%s' % mode, temp_path, '--notimechange')
 
 
@@ -40,7 +40,7 @@ def wait_for_task(task_id):
 def submit_bibindex_task(to_update):
     recids = [str(r) for r in to_update]
     return task_low_level_submission('bibindex', 'copy-doi', '-w', 'global',
-                                     '-i', ','.join(recids))
+                                     '-P', '3', '-i', ','.join(recids))
 
 
 def create_xml(recid, dois):
@@ -65,8 +65,7 @@ def main():
     to_replace = []
     to_update_recids = []
 
-    recids = perform_request_search(p='773__a:10*')
-    recids = [2875]
+    recids = perform_request_search(p='773__a:10*')[:6]
     for done, recid in enumerate(recids):
 
         fields = set(get_fieldvalues(recid, '773__a'))
