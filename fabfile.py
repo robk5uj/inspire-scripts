@@ -46,7 +46,7 @@ def dev():
     """
     env.hosts = env.roledefs['dev']
     env.dolog = False
-    env.branch = "rebased-2012-03-07-DEV-INSTANCE"
+    env.branch = "dev"
 
 
 @task
@@ -56,7 +56,7 @@ def test():
     """
     env.hosts = env.roledefs['test']
     env.dolog = False
-    env.branch = "rebased-2012-03-07-TEST-INSTANCE"
+    env.branch = "test"
 
 
 @task
@@ -66,7 +66,7 @@ def prod():
     """
     env.hosts = env.roledefs['prod']
     env.dolog = True
-    env.branch = "rebased-2012-03-07"
+    env.branch = "prod"
 
 
 @task
