@@ -38,8 +38,6 @@ if __name__ == '__main__':
     for count, recid in enumerate(recids):
         if count % 1000 == 0:
             print 'done %s of %s' % (count, len(recids))
-        if recid < 1000000:
-            continue
 
         if verbose:
             print 'processing', recid
