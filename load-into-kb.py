@@ -1,7 +1,12 @@
 import sys
+import re
 
 from invenio.bibknowledge import add_kb_mapping
-from invenio.refextract_re import re_kb_line
+
+
+# Pattern to recognise a correct knowledge base line:
+re_kb_line = re.compile(ur'^\s*(?P<seek>[^\s].*)\s*---\s*(?P<repl>[^\s].*)\s*$',
+                        re.UNICODE)
 
 
 def load_kb_from_file(path, builder):
@@ -12,7 +17,7 @@ def load_kb_from_file(path, builder):
 
     def lazy_parser(fh):
         for rawline in fh:
-            if rawline.startswith('#'):
+            if rawline.startswith('#') or rawline.isspace():
                 continue
 
             try:
@@ -41,8 +46,10 @@ def db_saver(kb_name, kb):
     for key, value in kb:
         add_kb_mapping(kb_name, key, value)
 
+
 def usage():
     print >> sys.stderr, "Usage load-into-kb.py kb_name file.kb"
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
