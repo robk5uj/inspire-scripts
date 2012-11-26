@@ -5,11 +5,14 @@ from invenio.bibrecord import create_record, \
                               record_get_field_instances, \
                               field_get_subfield_instances
 from fix_arxiv_refs import tag_arxiv_more
+
+
 def load_ids():
     f = open('ids2.txt')
     for line in f:
         if line.strip():
             yield int(line)
+
 
 def look_for_revisions(recid):
     revisions = get_record_revision_ids(recid)
@@ -20,6 +23,7 @@ def look_for_revisions(recid):
         rev_count += 1
         rev_info = get_info_of_revision_id(revisions[rev_count])
     return revisions[0], revisions[rev_count]
+
 
 def get_rn(revision):
     rns = set()

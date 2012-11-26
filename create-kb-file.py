@@ -1,7 +1,6 @@
 import re
 import sys
 
-from invenio.bibknowledge import add_kb_mapping
 
 re_kb_line = re.compile(ur'^\s*(?P<seek>[^\s]+)\s+(?P<repl>[^\s].*)\s*$',
                         re.UNICODE)
