@@ -31,7 +31,7 @@ else:
     sys.exit(1)
 
 env.roledefs = {
-    'dev': ['pcudssw1508.cern.ch'],
+    'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
     'prod': ['pcudssw1506.cern.ch'],
     'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch']
