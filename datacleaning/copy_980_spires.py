@@ -45,7 +45,7 @@ def wait_for_task(task_id):
 def create_our_record(recid):
     record = {}
     record_add_field(record, '001', controlfield_value=str(recid))
-    subfields = [('a', 'CORE')]
+    subfields = [('a', 'HEP')]
     record_add_field(record, '980', subfields=subfields)
     return print_rec(record)
 
