@@ -53,7 +53,7 @@ def process_chunk(to_process):
 def create_xml(recid, texkey):
     record = {}
     record_add_field(record, '001', controlfield_value=str(recid))
-    subfields_toadd = [('z', texkey), ('9', 'INSPIRETeX')]
+    subfields_toadd = [('a', texkey), ('9', 'INSPIRETeX')]
     record_add_field(record, tag='035', subfields=subfields_toadd)
     return print_rec(record)
 
@@ -61,7 +61,7 @@ def create_xml(recid, texkey):
 def main():
     verbose = '-v' in sys.argv
 
-    recids = perform_request_search(p='-035:spirestex -(-100__a:/.*/ -710__g:/.*/)')
+    recids = perform_request_search(p='-035:spirestex', cc='HEP')
     print "Found %s records to assign texkeys" % len(recids)
     processed = []
     to_process = []
@@ -91,10 +91,12 @@ def main():
 
         if not has_texkey:
             TexKeySeq = TexkeySeq()
+            new_texkey = ""
             try:
                 new_texkey = TexKeySeq.next_value(recid)
             except TexkeyNoAuthorError:
                 print "WARNING: Record %s has no first author or collaboration" % recid
+                continue
             xml = create_xml(recid, new_texkey)
             processed.append(recid)
             to_process.append(xml)
