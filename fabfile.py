@@ -1,28 +1,36 @@
+import time
+import re
+import traceback
 import os
 import sys
+
+from functools import wraps
+from tempfile import mkstemp
+
+import fabric.state
 from fabric.api import run, \
-                       task, \
+                       task as fab_task, \
                        env, \
                        settings, \
                        local, \
                        cd, \
                        sudo, \
-                       lcd
-
+                       lcd, \
+                       hide
+from fabric.utils import abort
 from fabric.operations import prompt
-from tempfile import mkstemp
-import time
-import re
+from fabric.contrib.files import exists
 
 from invenio.mailutils import send_email
 from invenio.config import CFG_SITE_ADMIN_EMAIL
 
-CFG_LINES_TO_IGNORE = ("#",)
+
+CFG_LINES_TO_IGNORE = ("#", )
 CFG_CMDDIR = os.environ.get('TMPDIR', '/tmp')
 CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 CFG_LOG_EMAIL = "admin@inspirehep.net"
-CFG_REPODIR = None
 CFG_INVENIO_DEPLOY_RECIPE = "/afs/cern.ch/project/inspire/repo/invenio-create-deploy-recipe"
+CFG_DEFAULT_RECIPE_ARGS = " --inspire --use-source --no-pull --via-filecopy"
 
 if os.environ.get('EDITOR'):
     CFG_EDITOR = os.environ.get('EDITOR')
@@ -43,6 +51,23 @@ env.branch = ""
 env.fetch = None
 env.repodir = ""
 env.dolog = True
+env.extra_hosts = "no"
+
+
+def task(f):
+    @wraps(f)
+    def fun(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception, e:
+            if fabric.state.output.debug:
+                import traceback
+                traceback.print_exc()
+            else:
+                sys.stderr.write("Fatal error: %s\n" % str(e))
+            sys.exit(1)
+
+    return fab_task(fun)
 
 
 @task
@@ -51,6 +76,45 @@ def origin():
     Activate origin fetching-
     """
     env.fetch = "origin"
+
+
+@task
+def localhost():
+    global run, cd, exists, sudo
+
+    def sudo(cmd, user=None, shell=False):
+        if user:
+            user_str = '-u %s ' % user
+        else:
+            user_str = ''
+        if shell:
+            cmd = 'bash -c "%s"'
+        return run('sudo %s%s' % (user_str, cmd))
+
+    def run(cmd, shell=True, warn_only=False):
+        if shell:
+            shell = 'sh'
+        else:
+            shell = None
+
+        old_warn_only = fabric.state.env.warn_only
+        if warn_only:
+            fabric.state.env.warn_only = warn_only
+
+        try:
+            r = local(cmd, capture=True, shell=shell)
+        finally:
+            fabric.state.env.warn_only = old_warn_only
+
+        print r
+        return r
+
+    def cd(*args, **kwargs):
+        return lcd(*args, **kwargs)
+
+    def exists(path):
+        with settings(hide('everything'), warn_only=True):
+            return run('test -e "$(echo %s)"' % path, warn_only=True).succeeded
 
 
 @task
@@ -81,6 +145,7 @@ def prod():
     env.hosts = env.roledefs['prod']
     env.dolog = True
     env.branch = "prod"
+    env.extra_hosts = "prod_aux"
 
 
 @task
@@ -89,6 +154,7 @@ def prod_aux():
     Activate configuration for INSPIRE PROD aux servers.
     """
     env.hosts = env.roledefs['prod_aux']
+
 
 @task
 def ops():
@@ -113,9 +179,11 @@ def repo(repo):
     """
     env.fetch = repo
 
+
 # MAIN TASKS
+
 @task
-def makeinstall(opsbranch=env.branch, inspirebranch="master"):
+def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     """
     TODO: Implement this recipe
 
@@ -172,6 +240,9 @@ def makeinstall(opsbranch=env.branch, inspirebranch="master"):
     ls -l %(prefixdir)s/bin/bibsched
     #+END_SRC
     """
+    if opsbranch is None:
+        opsbranch = env.branch
+
     # Prepare branches in the two repos
     invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
     ready_branch(opsbranch, invenio_srcdir)
@@ -179,10 +250,10 @@ def makeinstall(opsbranch=env.branch, inspirebranch="master"):
     inspire_srcdir = run("echo $CFG_INSPIRE_SRCDIR")
     ready_branch(inspirebranch, inspire_srcdir)
 
-    prefixdir = run("echo $CFG_INVENIO_SRCDIR")
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
 
-    config_cmd = "aclocal-1.9 && automake-1.9 -a && autoconf && ./configure prefix=%s" % (prefixdir,)
+    config_cmd = "aclocal && automake -a && autoconf && ./configure prefix=%s" % (prefixdir,)
 
     recipe_text = """
     #+BEGIN_SRC sh
@@ -197,7 +268,7 @@ def makeinstall(opsbranch=env.branch, inspirebranch="master"):
 
     if env.hosts == env.roledefs['prod'] or env.hosts == env.roledefs['prod_aux']:
         recipe_text += """
-        sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg ----update-config-py --update-dbquery-py
+        sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg --update-config-py --update-dbquery-py
         sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
         sudo chmod go-rxw %(prefixdir)s/bin/dbexec*
         sudo chown root.root %(prefixdir)s/bin/dbexec*
@@ -210,7 +281,7 @@ def makeinstall(opsbranch=env.branch, inspirebranch="master"):
             ls -l %(prefixdir)s/bin/bibsched
             """ % {'prefixdir': prefixdir}
     else:
-        recipe_text += "sudo -u %s %s/bin/inveniocfg ----update-all" % (apacheuser, prefixdir)
+        recipe_text += "sudo -u %s %s/bin/inveniocfg --update-all" % (apacheuser, prefixdir)
 
     recipe_text += """
     cd %(inspiredir)s
@@ -224,21 +295,24 @@ def makeinstall(opsbranch=env.branch, inspirebranch="master"):
     if env.hosts == env.roledefs['dev']:
         recipe_text += "sudo -u %s make reset-ugly-ui" % (apacheuser,)
 
-    recipe_text += "sudo /etc/init.d/httpd restart\n#+END_SRC"
+    if reload_apache == "yes":
+        recipe_text += "sudo /etc/init.d/httpd reload\n"
 
+    recipe_text = "#+END_SRC"
+    print
+
+    recipe_text = ready_command_file(recipe_text)
+    print '#+BEGIN_SRC sh'
     print recipe_text
-
-    cmd_filename = ready_command_file(recipe_text)
+    print '#+END_SRC'
+    cmd_filename = save_command_file(recipe_text)
     if not cmd_filename:
         print("ERROR: No command file")
         sys.exit(1)
 
     hosts_touched = env.hosts
     executed_commands = perform_deploy(cmd_filename, invenio_srcdir)
-    if env.hosts == env.roledefs['prod']:
-        default = "prod_aux"
-    else:
-        default = "no"
+    default = env.extra_hosts
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     while True:
@@ -270,23 +344,28 @@ First, wait for bibsched jobs to stop and put the queue to manual mode
 
 
 @task
-def deploy(branch=env.branch, commitid="", recipeargs="--inspire --use-source --no-pull --via-filecopy", repodir=env.repodir):
+def deploy(branch=None, commitid=None, recipeargs=CFG_DEFAULT_RECIPE_ARGS,
+                                                                 repodir=None):
     """
     Do a deployment in given repository using any commitid
     and recipe arguments given.
     """
-    if not repodir:
+    if branch is None:
+        branch = env.branch
+
+    if repodir is None:
         repodir = env.repodir
-        if not repodir:
-            print("Error: No repodir")
-            sys.exit(1)
+
+    if not repodir:
+        print("Error: No repodir")
+        sys.exit(1)
 
     # Prepare remote version of the given branch for deployment
-    ready_branch(branch, repodir)
+    ready_branch(branch=branch, repodir=repodir)
 
     # Prepare list of commands to run
     out = _get_recipe(repodir, recipeargs, commitid)
-    cmd_filename = ready_command_file(out)
+    cmd_filename = save_command_file(ready_command_file(out))
 
     if not cmd_filename:
         print("ERROR: No command file")
@@ -294,10 +373,7 @@ def deploy(branch=env.branch, commitid="", recipeargs="--inspire --use-source --
 
     executed_commands = perform_deploy(cmd_filename, repodir)
 
-    if env.hosts == env.roledefs['prod']:
-        default = "prod_aux"
-    else:
-        default = "no"
+    default = env.extra_hosts
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     while True:
@@ -322,26 +398,27 @@ def deploy(branch=env.branch, commitid="", recipeargs="--inspire --use-source --
 
 
 @task
-def perform_deploy(cmd_filename, repodir=env.repodir):
+def perform_deploy(cmd_filename, repodir=None):
     """
     Given a path to a file with commands, this function will run
     each command on the remote host in the given directory, line by line.
 
     Returns a list of executed commands.
     """
+    if repodir is None:
+        repodir = env.repodir
     if not repodir:
-        print("Error: No repodir")
-        sys.exit(1)
+        raise Exception("Error: No repodir")
 
     choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
     if choice.lower() in ["y", "ye", "yes"]:
         local("%s %s" % (CFG_EDITOR, cmd_filename))
 
-    print("--- COMMANDS TO RUN ---:")
+    print "--- COMMANDS TO RUN ---"
     with open(cmd_filename) as filecontent:
         print filecontent.read()
-    print
-    choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string,), default="yes")
+    print "--- END OF COMMANDS ---"
+    choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string, ), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
         sys.exit(1)
 
@@ -359,27 +436,22 @@ def perform_deploy(cmd_filename, repodir=env.repodir):
 
 
 @task
-def check_branch(old_branch, new_branch, runlocal=False, repodir=env.repodir):
+def check_branch(base_branch, repodir=None):
     """
     Run a kwalitee check of the files to be deployed. May be run locally.
     """
+    if repodir is None:
+        repodir = env.repodir
     if not repodir:
-        print("Error: No repodir")
-        sys.exit(1)
+        raise Exception("No repodir")
 
-    if runlocal:
-        run_func = local
-        cd_func = lcd
-    else:
-        run_func = run
-        cd_func = cd
-
-    with cd_func(repodir):
-        files_to_check = run_func("git log %s..%s --pretty=format: --name-only | grep '\.py'" %
-                                  (old_branch, new_branch))
+    with cd(repodir):
+        files_to_check = run("git log HEAD..%s --pretty=format: --name-only | grep '\.py'" %
+                                  base_branch)
         for filepath in files_to_check.split('\n'):
-            run_func("python $CFG_INVENIO_SRCDIR/modules/miscutil/lib/kwalitee.py --check-all %s" %
-                    (filepath,))
+            if exists(filepath):
+                run("python modules/miscutil/lib/kwalitee.py --check-all %s" %
+                        (filepath, ), warn_only=True)
 
 
 @task
@@ -391,16 +463,23 @@ def host_type():
 
 
 @task
-def reset_apache():
+def reload_apache():
     run("sudo /etc/init.d/httpd graceful")
 
 
 @task
-def ready_branch(branch=env.branch, repodir=env.repodir, repo=env.fetch):
+def ready_branch(branch=None, repodir=None, repo=None):
     """
     Connect to hosts and checkout given branch in given
     repository.
     """
+    if branch is None:
+        branch = env.branch
+    if repodir is None:
+        repodir = env.repodir
+    if repo is None:
+        repo = env.fetch
+
     with cd(repodir):
         if repo:
             run("git fetch %s" % repo)
@@ -408,40 +487,38 @@ def ready_branch(branch=env.branch, repodir=env.repodir, repo=env.fetch):
         run("git reset --hard %s" % branch)
 
 
-@task
-def pull_changes(branch=env.branch, repodir=env.repodir, repo=env.fetch):
-    """
-    Fetches from given repo and resets HEAD to the given branch in the repo.
-    """
-    with cd(repodir):
-        run("git fetch %s && git reset --hard %s/%s" % (repo, repo, branch))
+pull_changes = ready_branch
 
 
 def ready_command_file(out):
+    if not "#+BEGIN_SRC sh" in out:
+        print("Error, no commands in output")
+        return
+
+    # Get everything between SRC
+    src = "".join(re.findall("BEGIN_SRC sh\r?\n(.*)#\+END_SRC", str(out), re.S))
+    # Take out stuff we don't want from the command list
+    cleaned_src = "\n".join([line.strip() for line in src.split("\n") \
+                 if line.strip() and not line.startswith(CFG_LINES_TO_IGNORE)])
+
+    return cleaned_src
+
+
+def save_command_file(out):
     """
     Will prepare al list of commands, line by line, in a file - based
     on given recipe-text.
     """
-    if not "#+BEGIN_SRC sh" in out:
-        print("Error, no commands in output")
-        return
-    # Get everything between SRC
-    src = "".join(re.findall("BEGIN_SRC sh\r\n(.*)#\+END_SRC", str(out), re.S))
-
-    # Take out stuff we don't want from the command list
-    cleaned_src = "\n".join([line for line in src.split("\r\n") \
-                            if line and line.strip() != "" and not line.startswith(CFG_LINES_TO_IGNORE)])
-
     try:
-        # Write default commands
         cmd_filename = _safe_mkstemp()
+        # Write default commands
         command_file = open(cmd_filename, 'w')
-        command_file.write(cleaned_src)
+        command_file.write(out)
         command_file.close()
     except:
         if os.path.exists(cmd_filename):
             os.remove(cmd_filename)
-        return None
+        raise
     return cmd_filename
 
 
@@ -452,7 +529,8 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
     """
     # Write default logs
     log_file = open(log_filename, 'w')
-    log_file.write("%s\n#+END_EXAMPLE\n\n#+BEGIN_SRC sh\n%s\n#+END_SRC\n" % (log, "\n".join(executed_commands)))
+    log_file.write("%s\n#+END_EXAMPLE\n\n#+BEGIN_SRC sh\n%s\n#+END_SRC\n" \
+                                         % (log, "\n".join(executed_commands)))
     log_file.close()
 
     # Open log for edit
@@ -470,9 +548,9 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
                       footer=""):
             print "Email sent to %s" % (log_mail,)
         else:
-            print("ERROR: Email not sent")
-            print(subject)
-            print(content)
+            print "ERROR: Email not sent"
+            print subject
+            print content
 
 # HELPER FUNCTIONS
 
@@ -503,13 +581,17 @@ def _run_command(directory, command):
         prompt("Press Enter to continue..")
 
 
-def _get_recipe(repodir, recipeargs, commitid=""):
+def _get_recipe(repodir, recipeargs, commitid=None):
     """
     Fetches the output from the recipe generated by invenio-devscript
     invenio-create-deploy-recipe.
     """
-    return run('CFG_INVENIO_SRCDIR=%s %s %s %s' % \
-              (repodir, CFG_INVENIO_DEPLOY_RECIPE, recipeargs, commitid))
+    if commitid:
+        commitid_arg = " %s" % commitid
+    else:
+        commitid_arg = ""
+    return run('CFG_INVENIO_SRCDIR=%s %s%s%s' % \
+              (repodir, CFG_INVENIO_DEPLOY_RECIPE, recipeargs, commitid_arg))
 
 
 def _safe_mkstemp():
