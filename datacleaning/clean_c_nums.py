@@ -2,13 +2,15 @@ from tempfile import mkstemp
 import os
 import time
 
-from invenio.search_engine import perform_request_search
 from invenio.config import CFG_TMPDIR
 from invenio.dbquery import run_sql
 from invenio.bibtask import task_low_level_submission
 from invenio.search_engine_utils import get_fieldvalues
+from invenio.search_engine import get_record
 from invenio.bibrecord import print_rec, \
-                              record_add_field
+                              record_add_field, \
+                              record_get_field_instances, \
+                              record_add_fields
 
 
 SCRIPT_NAME = '980-spires'
@@ -27,7 +29,7 @@ def submit_task(to_update):
     temp_file.close()
 
     return task_low_level_submission('bibupload', SCRIPT_NAME, '-P', '5',
-                                     '-a', temp_path, '--notimechange')
+                                     '-c', temp_path, '--notimechange')
 
 
 def submit_bibindex_task(to_update):
@@ -42,11 +44,23 @@ def wait_for_task(task_id):
         time.sleep(5)
 
 
+def mangle(code, value):
+    if code == 'a':
+        value = value.replace('/', '-')
+    return value
+
+
 def create_our_record(recid):
+    old_record = get_record(recid)
+    instances = record_get_field_instances(old_record, '980')
+    for field in instances:
+        subfields = [(code, mangle(code, value)) for code, value in field[0]]
+        del field[0][:]
+        field[0].extend(subfields)
+
     record = {}
     record_add_field(record, '001', controlfield_value=str(recid))
-    subfields = [('a', 'HEP')]
-    record_add_field(record, '980', subfields=subfields)
+    record_add_fields(record, '773', instances)
     return print_rec(record)
 
 
@@ -54,19 +68,23 @@ def main():
     to_update = []
     to_update_recids = []
 
-    recids = perform_request_search(p="970__a:'SPIRES'")
+    max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
+    recids = xrange(1, max_id + 1)
     for done, recid in enumerate(recids):
 
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
-        existing_fields = set(get_fieldvalues(recid, '980__a'))
-        if 'HEP' in existing_fields:
-            continue
+        needs_cleaning = False
+        for cnum in get_fieldvalues(recid, '773__w'):
+            if '/' in cnum:
+                needs_cleaning = True
 
-        xml = create_our_record(recid)
-        to_update.append(xml)
-        to_update_recids.append(recid)
+        if needs_cleaning:
+            print 'cleaning', recid, '(', len(to_update), 'of 1000 )'
+            xml = create_our_record(recid)
+            to_update.append(xml)
+            to_update_recids.append(recid)
 
         if len(to_update) == 1000 or done + 1 == len(recids) and len(to_update) > 0:
             task_id = submit_task(to_update)

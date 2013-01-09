@@ -7,8 +7,11 @@ from invenio.config import CFG_TMPDIR
 from invenio.dbquery import run_sql
 from invenio.bibtask import task_low_level_submission
 from invenio.search_engine_utils import get_fieldvalues
+from invenio.search_engine import get_record
 from invenio.bibrecord import print_rec, \
-                              record_add_field
+                              record_add_field, \
+                              field_get_subfield_instances, \
+                              record_get_field_instances
 
 
 SCRIPT_NAME = '980-spires'
@@ -27,7 +30,7 @@ def submit_task(to_update):
     temp_file.close()
 
     return task_low_level_submission('bibupload', SCRIPT_NAME, '-P', '5',
-                                     '-a', temp_path, '--notimechange')
+                                     '-c', temp_path, '--notimechange')
 
 
 def submit_bibindex_task(to_update):
@@ -42,11 +45,25 @@ def wait_for_task(task_id):
         time.sleep(5)
 
 
+class OurInstance(object):
+    def __init__(self, field):
+        self.field = field
+
+    def __eq__(self, b):
+        return hash(self) == hash(b)
+
+    def __hash__(self):
+        return hash(tuple(field_get_subfield_instances(self.field)))
+
+
 def create_our_record(recid):
+    old_record = get_record(recid)
+    instances = record_get_field_instances(old_record, '980')
+    new_instances = [l.field for l in set(OurInstance(i) for i in instances)]
+
     record = {}
     record_add_field(record, '001', controlfield_value=str(recid))
-    subfields = [('a', 'HEP')]
-    record_add_field(record, '980', subfields=subfields)
+    record_add_fields(record, '980', new_instances)
     return print_rec(record)
 
 
@@ -60,13 +77,12 @@ def main():
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
-        existing_fields = set(get_fieldvalues(recid, '980__a'))
-        if 'HEP' in existing_fields:
-            continue
-
-        xml = create_our_record(recid)
-        to_update.append(xml)
-        to_update_recids.append(recid)
+        count = get_fieldvalues(recid, '980__a').count('HEP')
+        if count > 1:
+            print recid, count
+            xml = create_our_record(recid)
+            to_update.append(xml)
+            to_update_recids.append(recid)
 
         if len(to_update) == 1000 or done + 1 == len(recids) and len(to_update) > 0:
             task_id = submit_task(to_update)
