@@ -14,7 +14,7 @@ from invenio.bibrecord import print_rec, \
                               record_get_field_instances
 
 
-SCRIPT_NAME = '980-spires'
+SCRIPT_NAME = '980-spires-clean'
 
 
 def submit_task(to_update):

@@ -13,7 +13,7 @@ from invenio.bibrecord import print_rec, \
                               record_add_fields
 
 
-SCRIPT_NAME = '980-spires'
+SCRIPT_NAME = 'clean-c-num'
 
 
 def submit_task(to_update):
@@ -34,7 +34,7 @@ def submit_task(to_update):
 
 def submit_bibindex_task(to_update):
     recids = [str(r) for r in to_update]
-    return task_low_level_submission('bibindex', SCRIPT_NAME, '-w', 'collection',
+    return task_low_level_submission('bibindex', SCRIPT_NAME, '-w', 'journal',
                                      '-i', ','.join(recids))
 
 
