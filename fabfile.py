@@ -17,7 +17,6 @@ from fabric.api import run, \
                        sudo, \
                        lcd, \
                        hide
-from fabric.utils import abort
 from fabric.operations import prompt
 from fabric.contrib.files import exists
 
@@ -61,7 +60,6 @@ def task(f):
             return f(*args, **kwargs)
         except Exception, e:
             if fabric.state.output.debug:
-                import traceback
                 traceback.print_exc()
             else:
                 sys.stderr.write("Fatal error: %s\n" % str(e))
