@@ -259,10 +259,25 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     cd %(opsdir)s
     %(conf)s
     make -s
-    sudo -u %(apache)s make install
+    sudo -u %(apache)s make -s install
     """ % {'apache': apacheuser,
            'opsdir': invenio_srcdir,
            'conf': config_cmd}
+
+    recipe_text += """
+    cd %(inspiredir)s
+    sudo -u %(apache)s make -s install
+    """ % {'apache': apacheuser,
+           'opsdir': invenio_srcdir,
+           'prefixdir': prefixdir,
+           'conf': config_cmd,
+           'inspiredir': inspire_srcdir}
+
+    if env.hosts == env.roledefs['dev']:
+        recipe_text += "sudo -u %s make reset-ugly-ui\n" % (apacheuser,)
+
+    if env.hosts == env.roledefs['test']:
+        recipe_text += "sudo -u %s make reset-test-ui\n" % (apacheuser,)
 
     if env.hosts == env.roledefs['prod'] or env.hosts == env.roledefs['prod_aux']:
         recipe_text += """
@@ -279,24 +294,12 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
             ls -l %(prefixdir)s/bin/bibsched
             """ % {'prefixdir': prefixdir}
     else:
-        recipe_text += "sudo -u %s %s/bin/inveniocfg --update-all" % (apacheuser, prefixdir)
-
-    recipe_text += """
-    cd %(inspiredir)s
-    sudo -u %(apache)s make install
-    """ % {'apache': apacheuser,
-           'opsdir': invenio_srcdir,
-           'prefixdir': prefixdir,
-           'conf': config_cmd,
-           'inspiredir': inspire_srcdir}
-
-    if env.hosts == env.roledefs['dev']:
-        recipe_text += "sudo -u %s make reset-ugly-ui" % (apacheuser,)
+        recipe_text += "sudo -u %s %s/bin/inveniocfg --update-all\n" % (apacheuser, prefixdir)
 
     if reload_apache == "yes":
         recipe_text += "sudo /etc/init.d/httpd reload\n"
 
-    recipe_text = "#+END_SRC"
+    recipe_text += "#+END_SRC"
     print
 
     recipe_text = ready_command_file(recipe_text)
