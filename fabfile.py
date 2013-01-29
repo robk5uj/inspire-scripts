@@ -181,9 +181,13 @@ def repo(repo):
 # MAIN TASKS
 
 @task
+def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
+    makeinstall(opsbranch, inspirebranch, reload_apache)
+
+@task
 def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     """
-    TODO: Implement this recipe
+    This task implement this recipe which re-installs the server.
 
     On every individual worker node:
 
@@ -317,6 +321,11 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     while True:
+        choice = prompt("Install jquery-plugins? (y/N)", default="no")
+        if choice.lower() in ["y", "ye", "yes"]:
+            cmd = "sudo -u %s make -s install-jquery-plugins" % (apacheuser,)
+            _run_command(invenio_srcdir, cmd)
+
         choice = prompt("Run these commands more hosts? (One of: %s)" % \
                        (', '.join(env.roledefs.keys()),), default=default)
         if choice != 'no' and choice in env.roledefs:
