@@ -43,7 +43,36 @@ env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
     'prod': ['pcudssw1506.cern.ch'],
-    'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch']
+    'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch'],
+    'proxy': ['pcudssw1503'],
+}
+
+dev_backends = [
+                "inspiredev",
+                "inspiredev-ssl",
+               ]
+
+test_backends = [
+                "inspiredev",
+                "inspiredev-ssl",
+                ]
+
+prod_backends = [
+                "inspireprod_app",
+                "inspireprod-ssl",
+                "inspireprod_static",
+                "inspireprod_rss",
+                "inspireprod_author",
+                "inspireprod_robot",
+                ]
+
+env.proxybackends = {
+    'dev': ['pccis84', dev_backends],
+    'test': ['pcudssw1505', test_backends],
+    'prod1': ['pcudssw1506', prod_backends],
+    'prod2': ['pcudssw1507', prod_backends],
+    'prod3': ['pcudssx1506', prod_backends],
+    'prod4': ['pcudssw1504', prod_backends],
 }
 
 env.branch = ""
@@ -144,6 +173,11 @@ def prod():
     env.dolog = True
     env.branch = "prod"
     env.extra_hosts = "prod_aux"
+
+
+@task
+def proxy():
+    env.hosts = env.roledefs['proxy']
 
 
 @task
@@ -497,7 +531,56 @@ def ready_branch(branch=None, repodir=None, repo=None):
         run("git reset --hard %s" % branch)
 
 
+@task
+def disable(server=None):
+    if not server:
+        print("No server defined")
+        return
+    backends = env.proxybackends
+    if not backends or server not in backends:
+        print("No backends defined")
+        return
+
+    servername, backends = backends[server]
+
+    choice = prompt("Disable the following server? %s (Y/n)" % (servername, ), default="yes")
+    if choice.lower() not in ["y", "ye", "yes"]:
+        return
+    proxy_action(servername, backends, action="disable")
+
+
+@task
+def enable(server=None):
+    if not server:
+        print("No server defined")
+        return
+    backends = env.proxybackends
+    if not backends or server not in backends:
+        print("No backends defined")
+        return
+
+    servername, backends = backends[server]
+
+    choice = prompt("Disable the following server? %s (Y/n)" % (servername, ), default="yes")
+    if choice.lower() not in ["y", "ye", "yes"]:
+        return
+    proxy_action(servername, backends, action="enable")
+
+
 pull_changes = ready_branch
+
+
+def proxy_action(server, backends, action="enable"):
+    for backend in backends:
+        if 'ssl' in backend:
+            # special ssl suffix
+            current_server_suffix = '-ssl'
+        else:
+            current_server_suffix = ''
+        current_server = server + current_server_suffix
+        cmd = 'echo "%s server %s/%s" | sudo nc -U /var/lib/haproxy/stats' \
+               % (action, backend, current_server)
+        sudo(cmd)
 
 
 def ready_command_file(out):
