@@ -35,7 +35,7 @@ def submit_task(to_update):
 def submit_bibindex_task(to_update):
     recids = [str(r) for r in to_update]
     return task_low_level_submission('bibindex', SCRIPT_NAME, '-w', 'journal',
-                                     '-i', ','.join(recids))
+                                     '-i', ','.join(recids), '-N', 'other')
 
 
 def wait_for_task(task_id):
@@ -45,14 +45,14 @@ def wait_for_task(task_id):
 
 
 def mangle(code, value):
-    if code == 'a':
+    if code == 'w':
         value = value.replace('/', '-')
     return value
 
 
 def create_our_record(recid):
     old_record = get_record(recid)
-    instances = record_get_field_instances(old_record, '980')
+    instances = record_get_field_instances(old_record, '773')
     for field in instances:
         subfields = [(code, mangle(code, value)) for code, value in field[0]]
         del field[0][:]
@@ -69,7 +69,7 @@ def main():
     to_update_recids = []
 
     max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
-    recids = xrange(1, max_id + 1)
+    recids = xrange(125107, max_id + 1)
     for done, recid in enumerate(recids):
 
         if done % 50 == 0:
@@ -81,7 +81,7 @@ def main():
                 needs_cleaning = True
 
         if needs_cleaning:
-            print 'cleaning', recid, '(', len(to_update), 'of 1000 )'
+            print 'cleaning', recid
             xml = create_our_record(recid)
             to_update.append(xml)
             to_update_recids.append(recid)
