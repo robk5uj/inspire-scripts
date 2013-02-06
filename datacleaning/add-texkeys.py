@@ -45,7 +45,7 @@ def wait_for_task(task_id):
 
 
 def process_chunk(to_process):
-    task_id = submit_task(to_process, 'c')
+    task_id = submit_task(to_process, 'a')
     print 'submitted task id %s' % task_id
     wait_for_task(task_id)
 
@@ -61,7 +61,7 @@ def create_xml(recid, texkey):
 def main():
     verbose = '-v' in sys.argv
 
-    recids = perform_request_search(p='-035:spirestex', cc='HEP')
+    recids = perform_request_search(p='-035:spirestex -035:inspiretex', cc='HEP')
     print "Found %s records to assign texkeys" % len(recids)
     processed = []
     to_process = []
