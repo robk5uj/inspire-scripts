@@ -15,7 +15,7 @@ from invenio.bibrecord import print_rec, \
                               record_add_fields
 
 
-SCRIPT_NAME = '980-spires-clean'
+SCRIPT_NAME = '980-unknown'
 
 
 def submit_task(to_update):
@@ -61,7 +61,7 @@ def create_our_record(recid):
     old_record = get_record(recid)
     instances = record_get_field_instances(old_record, '980')
     new_instances = [l.field for l in set(OurInstance(i) for i in instances
-                     if field_get_subfield_instances(i) == [('a', 'unknown')])]
+                     if field_get_subfield_instances(i) != [('a', 'unknown')])]
 
     record = {}
     record_add_field(record, '001', controlfield_value=str(recid))
@@ -73,18 +73,15 @@ def main():
     to_update = []
     to_update_recids = []
 
-    recids = perform_request_search(p="970__a:'SPIRES'")
+    recids = perform_request_search(p="980__a:\"unknown\"")
     for done, recid in enumerate(recids):
 
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
-        count = get_fieldvalues(recid, '980__a').count('HEP')
-        if count > 1:
-            print recid, count
-            xml = create_our_record(recid)
-            to_update.append(xml)
-            to_update_recids.append(recid)
+        xml = create_our_record(recid)
+        to_update.append(xml)
+        to_update_recids.append(recid)
 
         if len(to_update) == 1000 or done + 1 == len(recids) and len(to_update) > 0:
             task_id = submit_task(to_update)
