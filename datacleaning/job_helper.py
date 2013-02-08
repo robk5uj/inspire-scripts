@@ -2,15 +2,17 @@ import os
 import time
 
 from tempfile import mkstemp
+from operator import itemgetter
+from xml.etree import ElementTree as ET
 
 from invenio.dbquery import run_sql
 from invenio.config import CFG_TMPDIR
 from invenio.bibtask import task_low_level_submission
-
+from invenio.search_engine import get_record as get_record_original
 
 def submit_bibupload_task(to_submit, mode, user, priority=3, notimechange=False):
     # Save new record to file
-    (temp_fd, temp_path) = mkstemp(prefix='copy-doi',
+    (temp_fd, temp_path) = mkstemp(prefix=user,
                                    dir=CFG_TMPDIR)
     temp_file = os.fdopen(temp_fd, 'w')
     temp_file.write('<?xml version="1.0" encoding="UTF-8"?>')
@@ -57,7 +59,8 @@ class ChunkedTask(object):
         if self.submitter is None:
             raise Exception('Task submitter not defined')
 
-        self.submitter(self, self.to_submit, *self.args, **self.kwargs)
+        task_id = self.submitter(self.to_submit, *self.args, **self.kwargs)
+        wait_for_task(task_id)
 
     def add(self, el):
         self.to_submit.append(el)
@@ -70,11 +73,11 @@ class ChunkedTask(object):
 
 
 class ChunkedBibUpload(ChunkedTask):
-    submitter = submit_bibupload_task
+    submitter = staticmethod(submit_bibupload_task)
 
 
 class ChunkedBibIndex(ChunkedTask):
-    submitter = submit_bibupload_task
+    submitter = staticmethod(submit_bibindex_task)
 
 
 def all_recids(recids):
@@ -84,6 +87,97 @@ def all_recids(recids):
 
 def loop(recids, callback):
     for done, recid in enumerate(recids):
+        callback(recid)
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
-        callback(recid)
+
+
+def get_record(recid):
+    def create_control_field(inst):
+        return BibRecordControlField(inst[3].decode('utf-8'))
+
+    def create_field(inst):
+        subfields = [BibRecordSubField(code, value.decode('utf-8')) \
+                                                for code, value in inst[0]]
+        return BibRecordField(ind1=inst[1], ind2=inst[2], subfields=subfields)
+
+    record = BibRecord()
+    for tag, instances in get_record_original(recid).iteritems():
+        if tag.startswith('00'):
+            record[tag] = [create_control_field(inst) for inst in instances]
+        else:
+            record[tag] = [create_field(inst) for inst in instances]
+
+    return record
+
+
+class BibRecord(object):
+    def __init__(self, recid=None):
+        self.record = {}
+        if recid:
+            self.record['001'] = [BibRecordControlField(str(recid))]
+
+    def __setitem__(self, tag, fields):
+        self.record[tag] = fields
+
+    def __getitem__(self, tag):
+        return self.record[tag]
+
+    def to_xml(self):
+        root = ET.Element('record')
+        for tag, fields in sorted(self.record.iteritems(), key=itemgetter(0)):
+            for field in fields:
+                if tag.startswith('00'):
+                    controlfield = ET.SubElement(root,
+                                                 'controlfield',
+                                                 {'tag': tag})
+                    controlfield.text = field.value
+                else:
+                    attribs = {'tag': tag,
+                               'ind1': field.ind1,
+                               'ind2': field.ind2}
+                    datafield = ET.SubElement(root, 'datafield', attribs)
+                    for subfield in field.subfields:
+                        attrs = {'code': subfield.code}
+                        s = ET.SubElement(datafield, 'subfield', attrs)
+                        s.text = subfield.value
+        return ET.tostring(root)
+
+    # def to_xml(self):
+    #     out = ['<record>']
+    #     for tag, fields in sorted(self.record.iteritems(), key=itemgetter(0)):
+    #         out.extend(f.to_xml(tag) for f in fields)
+    #     out.append('</record>\n')
+    #     return '\n'.join(out)
+
+
+class BibRecordControlField(object):
+    def __init__(self, value):
+        self.value = value
+
+    def to_xml(self, tag):
+        return '  <controlfield tag="%s">%s</controlfield>' % (tag, self.value)
+
+class BibRecordField(object):
+    def __init__(self, ind1=" ", ind2=" ", subfields=None):
+        self.ind1 = ind1
+        self.ind2 = ind2
+        if subfields is None:
+            subfields = []
+        self.subfields = subfields
+
+    def to_xml(self, tag):
+        out = ['  <datafield tag="%s" ind1="%s" ind2="%s">' \
+                                                 % (tag, self.ind1, self.ind2)]
+        out.extend(subfield.to_xml() for subfield in self.subfields)
+        out.append('  </datafield>')
+        return '\n'.join(out)
+
+
+class BibRecordSubField(object):
+    def __init__(self, code, value):
+        self.code = code
+        self.value = value
+
+    def to_xml(self):
+        return '    <subfield code="%s">%s</subfield>' % (self.code, self.value)

@@ -1,12 +1,9 @@
 from job_helper import ChunkedBibUpload, \
                        ChunkedBibIndex, \
-                       loop
-from invenio.search_engine import perform_request_search, \
-                                  get_record
-from invenio.bibrecord import print_rec, \
-                              record_add_field, \
-                              record_add_fields, \
-                              record_get_field_instances
+                       loop, \
+                       get_record, \
+                       BibRecord
+from invenio.search_engine import perform_request_search
 
 SCRIPT_NAME = 'move-710g'
 
@@ -18,17 +15,16 @@ def mangle(code):
 
 def create_our_record(recid):
     old_record = get_record(recid)
-    instances = record_get_field_instances(old_record, '710')
+    instances = old_record['710']
 
     for field in instances:
-        subfields = [(mangle(code), value) for code, value in field[0]]
-        del field[0][:]
-        field[0].extend(subfields)
+        for subfield in field.subfields:
+            if subfield.code == 'a':
+                subfield.code = 'g'
 
-    record = {}
-    record_add_field(record, '001', controlfield_value=str(recid))
-    record_add_fields(record, '710', instances)
-    return print_rec(record)
+    record = BibRecord(recid=recid)
+    record['710'] = instances
+    return record.to_xml()
 
 
 def main():
