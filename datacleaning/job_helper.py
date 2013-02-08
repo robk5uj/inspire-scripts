@@ -143,20 +143,11 @@ class BibRecord(object):
                         s.text = subfield.value
         return ET.tostring(root)
 
-    # def to_xml(self):
-    #     out = ['<record>']
-    #     for tag, fields in sorted(self.record.iteritems(), key=itemgetter(0)):
-    #         out.extend(f.to_xml(tag) for f in fields)
-    #     out.append('</record>\n')
-    #     return '\n'.join(out)
-
 
 class BibRecordControlField(object):
     def __init__(self, value):
         self.value = value
 
-    def to_xml(self, tag):
-        return '  <controlfield tag="%s">%s</controlfield>' % (tag, self.value)
 
 class BibRecordField(object):
     def __init__(self, ind1=" ", ind2=" ", subfields=None):
@@ -166,18 +157,8 @@ class BibRecordField(object):
             subfields = []
         self.subfields = subfields
 
-    def to_xml(self, tag):
-        out = ['  <datafield tag="%s" ind1="%s" ind2="%s">' \
-                                                 % (tag, self.ind1, self.ind2)]
-        out.extend(subfield.to_xml() for subfield in self.subfields)
-        out.append('  </datafield>')
-        return '\n'.join(out)
-
 
 class BibRecordSubField(object):
     def __init__(self, code, value):
         self.code = code
         self.value = value
-
-    def to_xml(self):
-        return '    <subfield code="%s">%s</subfield>' % (self.code, self.value)
