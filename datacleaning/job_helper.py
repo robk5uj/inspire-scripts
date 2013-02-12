@@ -67,6 +67,7 @@ class ChunkedTask(object):
         self.to_submit.append(el)
         if len(self.to_submit) == self.chunk_size:
             self.submit_task()
+            self.to_submit = []
 
     def __del__(self):
         if self.to_submit:
@@ -125,10 +126,24 @@ class BibRecord(object):
         return self.record[tag]
 
     def __eq__(self, b):
-        return self == b
+        if set(self.record.keys()) != set(b.record.keys()):
+            return False
+
+        for tag, fields in self.record.iteritems():
+            if set(fields) != set(b[tag]):
+                return False
+
+        return True
 
     def __hash__(self):
-        return hash(tuple(self.record))
+        return hash(tuple(self.record.iteritems()))
+
+    def __repr__(self):
+        if '001' in self.record:
+            s = u'BibRecord(%s)' % list(self['001'])[0].value
+        else:
+            s = u'BibRecord()'
+        return s
 
     def to_xml(self):
         root = ET.Element('record')
@@ -170,12 +185,15 @@ class BibRecordField(object):
             subfields = []
         self.subfields = subfields
 
+    def __repr__(self):
+        return 'BibRecordField(ind1="%s",ind2="%s", subfields=%s)' % (self.ind1, self.ind2, self.subfields)
+
     def __eq__(self, b):
         return self.ind1 == b.ind1 and self.ind2 == b.ind2 \
-                    and self.subfields == b.subfields
+                    and set(self.subfields) == set(b.subfields)
 
     def __hash__(self):
-        return hash(tuple(self.ind1, self.ind2, tuple(self.subfields))
+        return hash((self.ind1, self.ind2, tuple(self.subfields)))
 
 
 class BibRecordSubField(object):
@@ -187,4 +205,4 @@ class BibRecordSubField(object):
         return self.code == b.code and self.value == b.value
 
     def __hash__(self):
-        return hash(tuple(self.code, self.value))
+        return hash((self.code, self.value))
