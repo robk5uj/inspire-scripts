@@ -127,6 +127,9 @@ class BibRecord(object):
     def __eq__(self, b):
         return self == b
 
+    def __hash__(self):
+        return hash(tuple(self.record))
+
     def to_xml(self):
         root = ET.Element('record')
         for tag, fields in sorted(self.record.iteritems(), key=itemgetter(0)):
@@ -168,10 +171,11 @@ class BibRecordField(object):
         self.subfields = subfields
 
     def __eq__(self, b):
-        return hash(self) == hash(b)
+        return self.ind1 == b.ind1 and self.ind2 == b.ind2 \
+                    and self.subfields == b.subfields
 
     def __hash__(self):
-        return hash(tuple(self.subfields))
+        return hash(tuple(self.ind1, self.ind2, tuple(self.subfields))
 
 
 class BibRecordSubField(object):
