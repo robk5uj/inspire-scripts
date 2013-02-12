@@ -3,7 +3,8 @@ import time
 
 from tempfile import mkstemp
 from operator import itemgetter
-from xml.etree import ElementTree as ET
+# from xml.etree import ElementTree as ET
+import ElementTree as ET
 
 from invenio.dbquery import run_sql
 from invenio.config import CFG_TMPDIR
@@ -80,7 +81,7 @@ class ChunkedBibIndex(ChunkedTask):
     submitter = staticmethod(submit_bibindex_task)
 
 
-def all_recids(recids):
+def all_recids():
     max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
     return xrange(1, max_id + 1)
 
