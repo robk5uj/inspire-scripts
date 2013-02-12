@@ -69,7 +69,7 @@ def main():
     to_update_recids = []
 
     max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
-    recids = xrange(125107, max_id + 1)
+    recids = xrange(1, max_id + 1)
     for done, recid in enumerate(recids):
 
         if done % 50 == 0:
