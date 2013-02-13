@@ -10,6 +10,7 @@ from invenio.search_engine_utils import get_fieldvalues
 from invenio.search_engine import get_record
 from invenio.bibrecord import print_rec, \
                               record_add_field, \
+                              record_add_fields, \
                               field_get_subfield_instances, \
                               record_get_field_instances
 
@@ -71,9 +72,9 @@ def main():
     to_update = []
     to_update_recids = []
 
-    recids = perform_request_search(p="970__a:'SPIRES'")
-    for done, recid in enumerate(recids):
+    recids = perform_request_search(p="980:HEP")
 
+    for done, recid in enumerate(recids):
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
