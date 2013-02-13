@@ -21,7 +21,7 @@ def wait_for_task(task_id):
 def main():
     to_process = []
 
-    recids = perform_request_search(p="037__9:\"arXiv\"")
+    recids = perform_request_search(p="datecreated:2012-04-01->2013-01-30 and 037__9:arXiv -999c5:curator")
 
     for done, recid in enumerate(recids):
         if done % 50 == 0:
