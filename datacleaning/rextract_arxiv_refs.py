@@ -27,6 +27,8 @@ def main():
         if done % 50 == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
+        to_process.append(recid)
+
         if len(to_process) == 1000:
             task_id = submit_task(to_process)
             print 'submitted task id %s' % task_id
