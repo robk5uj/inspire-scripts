@@ -6,7 +6,7 @@ from invenio.dbquery import run_sql
 from invenio.bibedit_utils import get_record
 from invenio.sequtils_texkey import TexkeySeq, TexkeyNoAuthorError
 from invenio.bibtask import task_low_level_submission
-from invenio.config import CFG_TMPDIR
+from invenio.config import CFG_TMPSHAREDDIR 
 
 import sys
 import os
@@ -19,7 +19,7 @@ PREFIX = "texkey-upload"
 def submit_task(to_submit, mode):
     # Save new record to file
     (temp_fd, temp_path) = mkstemp(prefix=PREFIX,
-                                   dir=CFG_TMPDIR)
+                                   dir=CFG_TMPSHAREDDIR)
     temp_file = os.fdopen(temp_fd, 'w')
     temp_file.write('<?xml version="1.0" encoding="UTF-8"?>')
     temp_file.write('<collection>')
