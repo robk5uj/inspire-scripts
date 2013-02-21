@@ -195,6 +195,9 @@ class BibRecordField(object):
     def __hash__(self):
         return hash((self.ind1, self.ind2, tuple(self.subfields)))
 
+    def get_subfield_values(self, code):
+        return [s.value for s in self.subfields if s.code == code]
+
 
 class BibRecordSubField(object):
     def __init__(self, code, value):
