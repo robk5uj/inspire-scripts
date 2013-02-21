@@ -7,14 +7,14 @@ from operator import itemgetter
 import ElementTree as ET
 
 from invenio.dbquery import run_sql
-from invenio.config import CFG_TMPDIR
+from invenio.config import CFG_TMPSHAREDDIR
 from invenio.bibtask import task_low_level_submission
 from invenio.search_engine import get_record as get_record_original
 
 def submit_bibupload_task(to_submit, mode, user, priority=3, notimechange=False):
     # Save new record to file
     (temp_fd, temp_path) = mkstemp(prefix=user,
-                                   dir=CFG_TMPDIR)
+                                   dir=CFG_TMPSHAREDDIR)
     temp_file = os.fdopen(temp_fd, 'w')
     temp_file.write('<?xml version="1.0" encoding="UTF-8"?>')
     temp_file.write('<collection>')
