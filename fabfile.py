@@ -45,6 +45,9 @@ env.roledefs = {
     'prod': ['pcudssw1506.cern.ch'],
     'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch'],
     'proxy': ['pcudssw1503'],
+    'prod2': ['pcudssw1507.cern.ch'],
+    'prod3': ['pcudssx1506.cern.ch'],
+    'prod4': ['pcudssw1504.cern.ch'],
 }
 
 dev_backends = [
@@ -178,6 +181,36 @@ def prod():
 @task
 def proxy():
     env.hosts = env.roledefs['proxy']
+
+
+@task
+def prod2():
+    """
+    Activate configuration for INSPIRE PROD main server.
+    """
+    env.hosts = env.roledefs['prod2']
+    env.dolog = True
+    env.branch = "prod"
+
+
+@task
+def prod3():
+    """
+    Activate configuration for INSPIRE PROD main server.
+    """
+    env.hosts = env.roledefs['prod3']
+    env.dolog = True
+    env.branch = "prod"
+
+
+@task
+def prod4():
+    """
+    Activate configuration for INSPIRE PROD main server.
+    """
+    env.hosts = env.roledefs['prod4']
+    env.dolog = True
+    env.branch = "prod"
 
 
 @task
@@ -317,7 +350,11 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     if env.hosts == env.roledefs['test']:
         recipe_text += "sudo -u %s make reset-test-ui\n" % (apacheuser,)
 
-    if env.hosts == env.roledefs['prod'] or env.hosts == env.roledefs['prod_aux']:
+    # Here we see if any of the current hosts are production machines, if so - special rules apply
+    is_production_machine = bool([host for host in env.hosts \
+                                  if host in env.roledefs['prod'] \
+                                     or host in env.roledefs['prod_aux']])
+    if is_production_machine:
         recipe_text += """
         sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg --update-config-py --update-dbquery-py
         sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
@@ -533,6 +570,9 @@ def ready_branch(branch=None, repodir=None, repo=None):
 
 @task
 def disable(server=None):
+    """
+    Disable a server in the haproxy configuration. Use with proxy.
+    """
     if not server:
         print("No server defined")
         return
@@ -551,6 +591,9 @@ def disable(server=None):
 
 @task
 def enable(server=None):
+    """
+    Enable a server in the haproxy configuration. Use with proxy.
+    """
     if not server:
         print("No server defined")
         return
@@ -565,6 +608,19 @@ def enable(server=None):
     if choice.lower() not in ["y", "ye", "yes"]:
         return
     proxy_action(servername, backends, action="enable")
+
+
+@task
+def unit():
+    """
+    Run unit-tests on selected server.
+    """
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
+    apacheuser = run("echo $CFG_INVENIO_USER")
+    sudo("%(prefix)s/bin/inveniocfg --run-unit-tests" % {
+            'apache': apacheuser,
+            'prefix': prefixdir,
+        }, user=apacheuser)
 
 
 pull_changes = ready_branch
