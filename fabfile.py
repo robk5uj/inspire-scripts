@@ -724,10 +724,14 @@ def _run_command(directory, command):
             # with a "with cd()" context manager
             pass
         else:
-            with cd(directory):
-                run(command)
-    if command.startswith(('colordiff', 'diff')):
-        prompt("Press Enter to continue..")
+            if command.startswith(('colordiff', 'diff')):
+                with cd(directory):
+                    with hide('warnings'):
+                        run(command, warn_only=True)
+                prompt("Press Enter to continue..")
+            else:
+                with cd(directory):
+                    run(command)
 
 
 def _get_recipe(repodir, recipeargs, commitid=None):
