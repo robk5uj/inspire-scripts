@@ -159,6 +159,7 @@ def dev():
     Activate configuration for INSPIRE DEV server.
     """
     env.roles = ['dev']
+    env.roles_aux = ['dev']
     env.dolog = False
     env.branch = "dev"
 
@@ -266,6 +267,18 @@ def safe_makeinstall(opsbranch=None, inspirebranch="master",
 @task
 def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     makeinstall(opsbranch, inspirebranch, reload_apache)
+
+
+@task
+def install_jquery_plugins():
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
+    apacheuser = run("echo $CFG_INVENIO_USER")
+
+    choice = prompt("Install jquery-plugins? (y/N)", default="no")
+    if choice.lower() in ["y", "ye", "yes"]:
+        cmd = "sudo -u %s make -s install-jquery-plugins" % (apacheuser,)
+        _run_command(invenio_srcdir, cmd)
+
 
 @task
 def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
@@ -405,26 +418,17 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     hosts_touched = env.hosts
     executed_commands = perform_deploy(cmd_filename, invenio_srcdir)
 
-    default = env.roles_aux
+    install_jquery_plugins()
+
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
-    while True:
-        choice = prompt("Install jquery-plugins? (y/N)", default="no")
-        if choice.lower() in ["y", "ye", "yes"]:
-            cmd = "sudo -u %s make -s install-jquery-plugins" % (apacheuser,)
-            _run_command(invenio_srcdir, cmd)
-
-        choice = prompt("Run these commands more hosts? (One of: %s)" % \
-                       (', '.join(env.roledefs.keys()),), default=default)
-        if choice != 'no' and choice in env.roledefs:
-            # For every host in defined role, perform deploy
-            for host in env.roledefs[choice]:
-                hosts_touched.append(host)
-                with settings(host_string=host):
-                    perform_deploy(cmd_filename, invenio_srcdir)
-            default = 'no'
-        else:
-            break
+    for host in chain(env.roledefs[role] for role in env.roles_aux):
+        choice = prompt("Press enter to run these commands on %s" % host)
+        # For every host in defined role, perform deploy
+        with settings(host_string=host):
+            hosts_touched.append(host)
+            perform_deploy(cmd_filename, invenio_srcdir)
+            install_jquery_plugins()
 
     # Logging?
     if env.dolog:
@@ -473,7 +477,7 @@ def deploy(branch=None, commitid=None, recipeargs=CFG_DEFAULT_RECIPE_ARGS,
 
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
-    for host in env.roledefs[env.roles_aux]:
+    for host in chain(env.roledefs[role] for role in env.roles_aux):
         choice = prompt("Press enter to run these commands on %s" % host)
         # For every host in defined role, perform deploy
         with settings(host_string=host):
