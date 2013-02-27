@@ -6,6 +6,7 @@ import sys
 
 from functools import wraps
 from tempfile import mkstemp
+from itertools import chain
 
 import fabric.state
 from fabric.api import run, \
@@ -16,7 +17,8 @@ from fabric.api import run, \
                        cd, \
                        sudo, \
                        lcd, \
-                       hide
+                       hide, \
+                       roles
 from fabric.operations import prompt
 from fabric.contrib.files import exists
 
@@ -42,9 +44,12 @@ else:
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
-    'prod': ['pcudssw1506.cern.ch'],
-    'prod_aux': ['pcudssw1507.cern.ch', 'pcudssx1506.cern.ch', 'pcudssw1504.cern.ch'],
+    'prod_main': ['pcudssw1506.cern.ch'],
+    'prod_aux': ['pcudssw1507.cern.ch',
+                 'pcudssx1506.cern.ch',
+                 'pcudssw1504.cern.ch'],
     'proxy': ['pcudssw1503'],
+    'prod1': ['pcudssw1506.cern.ch'],
     'prod2': ['pcudssw1507.cern.ch'],
     'prod3': ['pcudssx1506.cern.ch'],
     'prod4': ['pcudssw1504.cern.ch'],
@@ -152,7 +157,7 @@ def dev():
     """
     Activate configuration for INSPIRE DEV server.
     """
-    env.hosts = env.roledefs['dev']
+    env.roles = ['dev']
     env.dolog = False
     env.branch = "dev"
 
@@ -162,7 +167,7 @@ def test():
     """
     Activate configuration for INSPIRE TEST server.
     """
-    env.hosts = env.roledefs['test']
+    env.roles = ['test']
     env.dolog = False
     env.branch = "test"
 
@@ -172,10 +177,10 @@ def prod():
     """
     Activate configuration for INSPIRE PROD main server.
     """
-    env.hosts = env.roledefs['prod']
+    env.roles = ['prod_main']
+    env.roles_aux = ['prod_aux']
     env.dolog = True
     env.branch = "prod"
-    env.extra_hosts = "prod_aux"
 
 
 @task
@@ -184,11 +189,20 @@ def proxy():
 
 
 @task
+def prod1():
+    """
+    Activate configuration for INSPIRE PROD 1.
+    """
+    env.roles = ['prod1']
+    env.dolog = True
+    env.branch = "prod"
+
+@task
 def prod2():
     """
-    Activate configuration for INSPIRE PROD main server.
+    Activate configuration for INSPIRE PROD 2.
     """
-    env.hosts = env.roledefs['prod2']
+    env.roles = ['prod2']
     env.dolog = True
     env.branch = "prod"
 
@@ -196,9 +210,9 @@ def prod2():
 @task
 def prod3():
     """
-    Activate configuration for INSPIRE PROD main server.
+    Activate configuration for INSPIRE PROD 3.
     """
-    env.hosts = env.roledefs['prod3']
+    env.roles = ['prod3']
     env.dolog = True
     env.branch = "prod"
 
@@ -206,19 +220,11 @@ def prod3():
 @task
 def prod4():
     """
-    Activate configuration for INSPIRE PROD main server.
+    Activate configuration for INSPIRE PROD 4.
     """
-    env.hosts = env.roledefs['prod4']
+    env.roles = ['prod4']
     env.dolog = True
     env.branch = "prod"
-
-
-@task
-def prod_aux():
-    """
-    Activate configuration for INSPIRE PROD aux servers.
-    """
-    env.hosts = env.roledefs['prod_aux']
 
 
 @task
@@ -246,6 +252,15 @@ def repo(repo):
 
 
 # MAIN TASKS
+
+@task
+def safe_makeinstall(opsbranch=None, inspirebranch="master",
+                                                          reload_apache="yes"):
+    for target in chain(env.roles, env.roles_aux):
+        disable(target)
+        makeinstall(opsbranch, inspirebranch, reload_apache)
+        prompt("Press Enter to re-enable this server")
+        enable(target)
 
 @task
 def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
@@ -454,20 +469,13 @@ def deploy(branch=None, commitid=None, recipeargs=CFG_DEFAULT_RECIPE_ARGS,
 
     executed_commands = perform_deploy(cmd_filename, repodir)
 
-    default = env.extra_hosts
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
-    while True:
-        choice = prompt("Run these commands more hosts? (One of: %s)" % \
-                       (', '.join(env.roledefs.keys()),), default=default)
-        if choice != 'no' and choice in env.roledefs:
-            # For every host in defined role, perform deploy
-            for host in env.roledefs[choice]:
-                with settings(host_string=host):
-                    perform_deploy(cmd_filename, repodir)
-            default = 'no'
-        else:
-            break
+    for host in env.roledefs[env.roles_aux]:
+        choice = prompt("Press enter to run these commands on %s" % host)
+        # For every host in defined role, perform deploy
+        with settings(host_string=host):
+            perform_deploy(cmd_filename, repodir)
 
     # Logging?
     if env.dolog:
@@ -568,6 +576,7 @@ def ready_branch(branch=None, repodir=None, repo=None):
         run("git reset --hard %s" % branch)
 
 
+@roles(['proxy'])
 @task
 def disable(server=None):
     """
@@ -589,6 +598,7 @@ def disable(server=None):
     proxy_action(servername, backends, action="disable")
 
 
+@roles(['proxy'])
 @task
 def enable(server=None):
     """
@@ -604,7 +614,7 @@ def enable(server=None):
 
     servername, backends = backends[server]
 
-    choice = prompt("Disable the following server? %s (Y/n)" % (servername, ), default="yes")
+    choice = prompt("Enable the following server? %s (Y/n)" % (servername, ), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
         return
     proxy_action(servername, backends, action="enable")
