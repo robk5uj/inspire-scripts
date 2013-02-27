@@ -18,7 +18,8 @@ from fabric.api import run, \
                        sudo, \
                        lcd, \
                        hide, \
-                       roles
+                       roles, \
+                       execute
 from fabric.operations import prompt
 from fabric.contrib.files import exists
 
@@ -61,8 +62,8 @@ dev_backends = [
                ]
 
 test_backends = [
-                "inspiredev",
-                "inspiredev-ssl",
+                "inspiretest",
+                "inspiretest-ssl",
                 ]
 
 prod_backends = [
@@ -87,7 +88,7 @@ env.branch = ""
 env.fetch = None
 env.repodir = ""
 env.dolog = True
-env.extra_hosts = "no"
+env.roles_aux = []
 
 
 def task(f):
@@ -257,10 +258,10 @@ def repo(repo):
 def safe_makeinstall(opsbranch=None, inspirebranch="master",
                                                           reload_apache="yes"):
     for target in chain(env.roles, env.roles_aux):
-        disable(target)
+        execute(disable, target)
         makeinstall(opsbranch, inspirebranch, reload_apache)
         prompt("Press Enter to re-enable this server")
-        enable(target)
+        execute(enable, target)
 
 @task
 def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
@@ -403,7 +404,8 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
 
     hosts_touched = env.hosts
     executed_commands = perform_deploy(cmd_filename, invenio_srcdir)
-    default = env.extra_hosts
+
+    default = env.roles_aux
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     while True:
