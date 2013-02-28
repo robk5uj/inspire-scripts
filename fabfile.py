@@ -258,11 +258,23 @@ def repo(repo):
 @task
 def safe_makeinstall(opsbranch=None, inspirebranch="master",
                                                           reload_apache="yes"):
-    for target in chain(env.roles, env.roles_aux):
+    roles = env.roles
+    roles_aux = env.roles_aux
+    env.roles = []
+    env.roles_aux = []
+    needs_autoconf = True
+    print 'hosts', list(chain(roles, roles_aux))
+    for target in chain(roles, roles_aux):
         execute(disable, target)
-        makeinstall(opsbranch, inspirebranch, reload_apache)
+        with settings(roles=[target]):
+            makeinstall(opsbranch=opsbranch,
+                        inspirebranch=inspirebranch,
+                        reload_apache=reload_apache,
+                        needs_autoconf=needs_autoconf)
         prompt("Press Enter to re-enable this server")
         execute(enable, target)
+        needs_autoconf = False
+
 
 @task
 def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
@@ -281,7 +293,15 @@ def install_jquery_plugins():
 
 
 @task
-def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
+def autoconf():
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
+    config_cmd = "aclocal && automake -a && autoconf && ./configure prefix=%s" % (prefixdir,)
+    with cd(invenio_srcdir):
+        run(config_cmd)
+
+@task
+def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", needs_autoconf=True):
     """
     This task implement this recipe which re-installs the server.
 
@@ -348,21 +368,20 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     inspire_srcdir = run("echo $CFG_INSPIRE_SRCDIR")
     ready_branch(inspirebranch, inspire_srcdir)
 
+    if needs_autoconf:
+        autoconf()
+
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
-
-    config_cmd = "aclocal && automake -a && autoconf && ./configure prefix=%s" % (prefixdir,)
 
     recipe_text = """
     #+BEGIN_SRC sh
     sudo -u %(apache)s /usr/bin/id
     cd %(opsdir)s
-    %(conf)s
     make -s
     sudo -u %(apache)s make -s install
     """ % {'apache': apacheuser,
-           'opsdir': invenio_srcdir,
-           'conf': config_cmd}
+           'opsdir': invenio_srcdir}
 
     recipe_text += """
     cd %(inspiredir)s
@@ -370,7 +389,6 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     """ % {'apache': apacheuser,
            'opsdir': invenio_srcdir,
            'prefixdir': prefixdir,
-           'conf': config_cmd,
            'inspiredir': inspire_srcdir}
 
     if env.hosts == env.roledefs['dev']:
@@ -422,7 +440,7 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
 
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
-    for host in chain(env.roledefs[role] for role in env.roles_aux):
+    for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
         choice = prompt("Press enter to run these commands on %s" % host)
         # For every host in defined role, perform deploy
         with settings(host_string=host):
@@ -477,7 +495,7 @@ def deploy(branch=None, commitid=None, recipeargs=CFG_DEFAULT_RECIPE_ARGS,
 
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
-    for host in chain(env.roledefs[role] for role in env.roles_aux):
+    for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
         choice = prompt("Press enter to run these commands on %s" % host)
         # For every host in defined role, perform deploy
         with settings(host_string=host):
