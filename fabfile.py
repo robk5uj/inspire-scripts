@@ -89,7 +89,7 @@ env.fetch = None
 env.repodir = ""
 env.dolog = True
 env.roles_aux = []
-
+env.mi_roles = []
 
 def task(f):
     @wraps(f)
@@ -159,7 +159,6 @@ def dev():
     Activate configuration for INSPIRE DEV server.
     """
     env.roles = ['dev']
-    env.roles_aux = ['dev']
     env.dolog = False
     env.branch = "dev"
 
@@ -183,6 +182,7 @@ def prod():
     env.roles_aux = ['prod_aux']
     env.dolog = True
     env.branch = "prod"
+    env.mi_roles = ['prod1', 'prod2', 'prod3', 'prod4']
 
 
 @task
@@ -195,16 +195,19 @@ def prod1():
     """
     Activate configuration for INSPIRE PROD 1.
     """
-    env.roles = ['prod1']
+    env.roles += ['prod1']
+    env.mi_roles += ['prod1']
     env.dolog = True
     env.branch = "prod"
+
 
 @task
 def prod2():
     """
     Activate configuration for INSPIRE PROD 2.
     """
-    env.roles = ['prod2']
+    env.roles += ['prod2']
+    env.mi_roles += ['prod2']
     env.dolog = True
     env.branch = "prod"
 
@@ -214,7 +217,8 @@ def prod3():
     """
     Activate configuration for INSPIRE PROD 3.
     """
-    env.roles = ['prod3']
+    env.roles += ['prod3']
+    env.mi_roles += ['prod3']
     env.dolog = True
     env.branch = "prod"
 
@@ -224,7 +228,8 @@ def prod4():
     """
     Activate configuration for INSPIRE PROD 4.
     """
-    env.roles = ['prod4']
+    env.roles += ['prod4']
+    env.mi_roles += ['prod4']
     env.dolog = True
     env.branch = "prod"
 
@@ -258,22 +263,27 @@ def repo(repo):
 @task
 def safe_makeinstall(opsbranch=None, inspirebranch="master",
                                                           reload_apache="yes"):
-    roles = env.roles
-    roles_aux = env.roles_aux
+    # Remove roles for makeinstall to not run all the hosts at once.
     env.roles = []
     env.roles_aux = []
+    env.dolog = False
     needs_autoconf = True
-    print 'hosts', list(chain(roles, roles_aux))
-    for target in chain(roles, roles_aux):
+    print 'targets', env.mi_roles
+    for target in env.mi_roles:
+        if target == env.mi_roles[-1]:
+            env.dolog = True
         execute(disable, target)
         with settings(roles=[target]):
-            makeinstall(opsbranch=opsbranch,
-                        inspirebranch=inspirebranch,
-                        reload_apache=reload_apache,
-                        needs_autoconf=needs_autoconf)
-        prompt("Press Enter to re-enable this server")
+            env.roles = [target]
+            execute(makeinstall, opsbranch=opsbranch,
+                                 inspirebranch=inspirebranch,
+                                 reload_apache=reload_apache,
+                                 needs_autoconf=needs_autoconf)
         execute(enable, target)
         needs_autoconf = False
+        # FIXME for logs later on:
+        # env.dolog = True
+
 
 
 @task
@@ -361,15 +371,19 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
     if opsbranch is None:
         opsbranch = env.branch
 
-    # Prepare branches in the two repos
     invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
-    ready_branch(opsbranch, invenio_srcdir)
-
     inspire_srcdir = run("echo $CFG_INSPIRE_SRCDIR")
-    ready_branch(inspirebranch, inspire_srcdir)
+
+    choice = prompt("Do you want to fetch new branches? (Y/n)", default="yes")
+    if choice.lower() in ["y", "ye", "yes"]:
+        # Prepare branches in the two repos
+        ready_branch(opsbranch, invenio_srcdir)
+        ready_branch(inspirebranch, inspire_srcdir)
 
     if needs_autoconf:
-        autoconf()
+        choice = prompt("Do you want to run autoconf? (Y/n)", default="yes")
+        if choice.lower() in ["y", "ye", "yes"]:
+            autoconf()
 
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
@@ -391,16 +405,15 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
            'prefixdir': prefixdir,
            'inspiredir': inspire_srcdir}
 
-    if env.hosts == env.roledefs['dev']:
+    if 'dev' in env.roles:
         recipe_text += "sudo -u %s make reset-ugly-ui\n" % (apacheuser,)
 
-    if env.hosts == env.roledefs['test']:
+    if 'test' in env.roles:
         recipe_text += "sudo -u %s make reset-test-ui\n" % (apacheuser,)
 
     # Here we see if any of the current hosts are production machines, if so - special rules apply
-    is_production_machine = bool([host for host in env.hosts \
-                                  if host in env.roledefs['prod'] \
-                                     or host in env.roledefs['prod_aux']])
+    is_production_machine = bool([True for role in env.roles \
+                                  if role.startswith('prod')])
     if is_production_machine:
         recipe_text += """
         sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg --update-config-py --update-dbquery-py
@@ -445,7 +458,10 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
         # For every host in defined role, perform deploy
         with settings(host_string=host):
             hosts_touched.append(host)
-            perform_deploy(cmd_filename, invenio_srcdir)
+            executed = perform_deploy(cmd_filename, invenio_srcdir)
+            # FIXME - we want log per node! This is "un peu retard"
+            if not executed_commands:
+                executed_commands = executed
             install_jquery_plugins()
 
     # Logging?
@@ -533,7 +549,7 @@ def perform_deploy(cmd_filename, repodir=None):
     print "--- END OF COMMANDS ---"
     choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string, ), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
-        sys.exit(1)
+        return []
 
     current_directory = repodir
     executed_commands = []
