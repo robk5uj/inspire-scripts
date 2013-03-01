@@ -272,6 +272,8 @@ def safe_makeinstall(opsbranch=None, inspirebranch="master",
     for target in env.mi_roles:
         if target == env.mi_roles[-1]:
             env.dolog = True
+        with settings(roles=[target]):
+            execute(stop_bibsched, target)
         execute(disable, target)
         with settings(roles=[target]):
             env.roles = [target]
@@ -309,6 +311,15 @@ def autoconf():
     config_cmd = "aclocal && automake -a && autoconf && ./configure prefix=%s" % (prefixdir,)
     with cd(invenio_srcdir):
         run(config_cmd)
+
+
+@task
+def stop_bibsched(target):
+    choice = prompt("Stop bibsched? (Y/n)", default="yes")
+    if choice.lower() in ["y", "ye", "yes"]:
+        prefixdir = run("echo $CFG_INVENIO_PREFIX")
+        run("sudo -u %s %s/bin/bibsched stop" % ("apache", prefixdir))
+
 
 @task
 def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", needs_autoconf=True):
