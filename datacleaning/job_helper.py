@@ -53,22 +53,22 @@ class ChunkedTask(object):
         self.kwargs = kwargs
         self.to_submit = []
 
-    def submit_task(self, *args, **kwargs):
+    def submit_task(self, to_submit):
         if self.submitter is None:
             raise Exception('Task submitter not defined')
-
-        task_id = self.submitter(self.to_submit, *self.args, **self.kwargs)
+        task_id = self.submitter(to_submit, *self.args, **self.kwargs)
         wait_for_task(task_id)
 
     def add(self, el):
         self.to_submit.append(el)
         if len(self.to_submit) == self.chunk_size:
-            self.submit_task()
+            to_submit = self.to_submit
             self.to_submit = []
+            self.submit_task(to_submit)
 
     def __del__(self):
         if self.to_submit:
-            self.submit_task()
+            self.submit_task(self.to_submit)
 
 
 class ChunkedBibUpload(ChunkedTask):
