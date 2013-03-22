@@ -2,15 +2,12 @@ from job_helper import ChunkedBibRank, \
                        loop, \
                        all_recids
 from invenio.docextract_record import get_record
-from invenio.dbquery import run_sql
 
 SCRIPT_NAME = 'bibrank-multiple-journals'
 
 
 def main():
-    bibrank = ChunkedBibRank(indexes='citation', user=SCRIPT_NAME)
-
-    counter = [0]
+    bibrank = ChunkedBibRank(methods='citation', user=SCRIPT_NAME)
 
     def cb_process_one(recid):
         print 'processing', recid
@@ -20,13 +17,10 @@ def main():
             pass
         else:
             if len(rec.find_fields('773__')) > 1:
-                counter[0] += 1
-                # bibrank.add(recid)
+                bibrank.add(recid)
 
 
-    max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
-    loop(xrange(1, max_id + 1), cb_process_one)
-    print 'total', counter[0]
+    loop(all_recids(), cb_process_one)
 
 if __name__ == '__main__':
     main()

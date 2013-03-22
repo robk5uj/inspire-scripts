@@ -39,7 +39,7 @@ def create_our_record(recid, bibupload, bibupload2):
 
     # Remove wrong indicator
     for field in instances_084[:]:
-        if field.ind1 == '1' and field.ind2 == '7' \
+        if field.ind1 == '7' and field.ind2 == ' ' \
                 and 'PACS' in field.get_subfield_values('2'):
             field.ind1 = ' '
             field.ind2 = ' '
