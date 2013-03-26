@@ -3,8 +3,6 @@ import sys
 from invenio.search_engine import search_pattern
 from invenio.bibdocfile import BibRecDocs
 
-ARXIV_URL_PATTERN = "http://export.arxiv.org/pdf/%s.pdf"
-
 
 def look_for_fulltext(recid):
     rec_info = BibRecDocs(recid)
