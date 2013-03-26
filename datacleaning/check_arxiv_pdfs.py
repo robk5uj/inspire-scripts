@@ -142,8 +142,8 @@ def main():
                 if not doc.docname.startswith(prefix):
                     continue
                 if doc.docname[len(prefix):] not in arxiv_ids \
-                    and doc.docname[len(prefix):] not in (i.replace('/', '-') for i in arxiv_ids) \
-                    and doc.docname[len(prefix):] not in (i.replace('/', '_') for i in arxiv_ids):
+                        and doc.docname[len(prefix):] not in (i.replace('/', '-') for i in arxiv_ids) \
+                        and doc.docname[len(prefix):] not in (i.replace('/', '_') for i in arxiv_ids):
                     processed.add(recid)
                     print '* processing', recid
                     print '  * arxiv ids', repr(arxiv_ids)

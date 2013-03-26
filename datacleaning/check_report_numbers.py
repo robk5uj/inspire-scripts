@@ -139,7 +139,7 @@ def like_arxiv(tag):
 
 
 def compute_arxiv_re(report_pattern):
-    return re.compile("^(?P<name>" + report_pattern + ")" \
+    return re.compile("^(?P<name>" + report_pattern + ")"
                                         + old_arxiv_numbers + "$", re.U|re.I)
 
 RE_OLD_ARXIV = [compute_arxiv_re(i) for i in old_arxiv.iterkeys()]
@@ -158,11 +158,7 @@ class InvalidReportNumber(Exception):
 
 
 def main():
-    processed = set()
-    to_process = []
-    to_process_ids = []
-
-    tags = run_sql("select id, tag, value from bib99x where tag = '999C5r'")
+    tags = run_sql("SELECT id, tag, value FROM bib99x WHERE tag = '999C5r'")
 
     for done, row in enumerate(tags):
         tag = row[2]
