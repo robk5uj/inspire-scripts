@@ -10,7 +10,7 @@ from invenio.search_engine import perform_request_search
 SCRIPT_NAME = 'lisbon-aff-repl'
 
 
-def create_our_record(recid, bibupload, bibupload2):
+def create_our_record(recid):
     old_record = get_record(recid)
 
     for subfield in old_record.find_subfields('100__u'):
@@ -46,7 +46,7 @@ def main():
         bibupload.add(xml)
         bibindex.add(recid)
 
-    recids = perform_request_search(p='700__u:"lisbon, lifep" or 100__u:"lisbon, LIFEP"')[:1]
+    recids = perform_request_search(p='700__u:"lisbon, lifep" or 100__u:"lisbon, LIFEP"')
     loop(recids, cb_process_one)
 
 
