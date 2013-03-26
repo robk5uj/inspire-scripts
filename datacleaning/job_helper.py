@@ -8,6 +8,24 @@ from invenio.config import CFG_TMPSHAREDDIR
 from invenio.bibtask import task_low_level_submission
 
 
+def all_recids():
+    max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
+    return xrange(1, max_id + 1)
+
+
+def loop(recids, callback):
+    for done, recid in enumerate(recids):
+        callback(recid)
+        if done % 50 == 0:
+            print 'done %s of %s' % (done + 1, len(recids))
+
+
+def wait_for_task(task_id):
+    sql = 'select status from schTASK where id = %s'
+    while run_sql(sql, [task_id])[0][0] != 'DONE':
+        time.sleep(5)
+
+
 def submit_bibupload_task(to_submit, mode, user, priority=3, notimechange=False):
     # Save new record to file
     (temp_fd, temp_path) = mkstemp(prefix=user,
@@ -29,12 +47,6 @@ def submit_bibupload_task(to_submit, mode, user, priority=3, notimechange=False)
     return task_low_level_submission(*args)
 
 
-def wait_for_task(task_id):
-    sql = 'select status from schTASK where id = %s'
-    while run_sql(sql, [task_id])[0][0] != 'DONE':
-        time.sleep(5)
-
-
 def submit_bibindex_task(to_update, indexes, user, priority=3):
     recids = [str(r) for r in to_update]
     return task_low_level_submission('bibindex', user,
@@ -47,6 +59,13 @@ def submit_bibrank_task(to_update, methods, user, priority=3):
     recids = [str(r) for r in to_update]
     return task_low_level_submission('bibrank', user,
                                      '-w', methods,
+                                     '-P', str(priority),
+                                     '-i', ','.join(recids))
+
+
+def submit_refextract_task(to_update, user, priority=3):
+    recids = [str(r) for r in to_update]
+    return task_low_level_submission('refextract', user,
                                      '-P', str(priority),
                                      '-i', ','.join(recids))
 
@@ -91,13 +110,5 @@ class ChunkedBibRank(ChunkedTask):
     submitter = staticmethod(submit_bibrank_task)
 
 
-def all_recids():
-    max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
-    return xrange(1, max_id + 1)
-
-
-def loop(recids, callback):
-    for done, recid in enumerate(recids):
-        callback(recid)
-        if done % 50 == 0:
-            print 'done %s of %s' % (done + 1, len(recids))
+class ChunkedRefextract(ChunkedTask):
+    submitter = staticmethod(submit_refextract_task)
