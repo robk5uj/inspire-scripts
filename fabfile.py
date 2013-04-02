@@ -277,35 +277,13 @@ def graceful():
 @task
 def safe_makeinstall(opsbranch=None, inspirebranch="master",
                      reload_apache="yes"):
-    # Remove roles for makeinstall to not run all the hosts at once.
-    env.roles = []
-    env.dolog = False
-    needs_autoconf = True
-    print 'targets', env.roles_aux
-    for target in env.roles_aux:
-        if target == env.roles_aux[-1]:
-            env.dolog = True
-        with settings(roles=[target]):
-            execute(stop_bibsched, target)
-        execute(disable, target)
-        with settings(roles=[target]):
-            env.roles = [target]
-            env.roles_aux = [target]
-            execute(makeinstall,
-                    opsbranch=opsbranch,
-                    inspirebranch=inspirebranch,
-                    reload_apache=reload_apache,
-                    needs_autoconf=needs_autoconf)
-        ping_host(env.host_string)
-        execute(enable, target)
-        needs_autoconf = False
-        # FIXME for logs later on:
-        # env.dolog = True
+    makeinstall(opsbranch, inspirebranch, reload_apache, True)
 
 
 @task
-def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
-    makeinstall(opsbranch, inspirebranch, reload_apache)
+def mi(opsbranch=None, inspirebranch="master", reload_apache="yes",
+       safe=False):
+    makeinstall(opsbranch, inspirebranch, reload_apache, safe)
 
 
 @task
@@ -329,70 +307,21 @@ def autoconf():
 
 
 @task
-def stop_bibsched(target):
+def stop_bibsched():
     choice = prompt("Stop bibsched? (Y/n)", default="yes")
     if choice.lower() in ["y", "ye", "yes"]:
         prefixdir = run("echo $CFG_INVENIO_PREFIX")
-        run("sudo -u %s %s/bin/bibsched stop" % ("apache", prefixdir))
+        apacheuser = run("echo $CFG_INVENIO_USER")
+        sudo("%s/bin/bibsched stop" % (prefixdir,), user=apacheuser)
 
 
 @task
-def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", needs_autoconf=True):
+def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes",
+                safe=False):
     """
-    This task implement this recipe which re-installs the server.
-
-    On every individual worker node:
-
-    #+BEGIN_SRC sh
-    sudo -u %(apache)s /usr/bin/id
-    cd %(repodir1)s
-    git pull
-    make -s
-    sudo -u %(apache)s make install
-    sudo -u %(apache)s %(prefixdir)s/bin/inveniocfg --update-all
-    sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
-    cd %(repodir2)s
-    git pull
-    sudo -u %(apache)s make install
-    #+END_SRC
-
-    On DEV, uglify interface:
-
-    #+BEGIN_SRC sh
-    sudo -u %(apache)s make reset-ugly-ui
-    #+END_SRC
-
-    On TEST, uglify interface like this:
-
-    #+BEGIN_SRC sh
-    sudo -u %(apache)s make reset-ugly-ui
-    sudo -u %(apache)s cp webstyle/inspire_logo_beta_ugly_test.png \
-         %(prefixdir)s/var/www/img/inspire_logo_beta.png
-    #+END_SRC
-
-    Now restart Apache:
-
-    #+BEGIN_SRC sh
-    sudo /etc/init.d/httpd restart
-    #+END_SRC
-
-    Note that on PROD we have higher safety for =dbexec= which is to be
-    reset now:
-
-    #+BEGIN_SRC sh
-    sudo %(prefixdir)s/bin/inveniocfg --update-dbexec
-    sudo chmod go-rxw %(prefixdir)s/bin/dbexec*
-    sudo chown root.root %(prefixdir)s/bin/dbexec*
-    ls -l %(prefixdir)s/bin/dbexec*
-    #+END_SRC
-
-    Also on PROD the bibsched rights on the second worker node should be
-    revoked:
-
-    #+BEGIN_SRC sh
-    sudo chmod a-rwx %(prefixdir)s/bin/bibsched
-    ls -l %(prefixdir)s/bin/bibsched
-    #+END_SRC
+    This task implement the recipe to re-install the server. Use the safe flag
+    to disable bibsched on the node and to safely disable the node in haproxy
+    before installing.
     """
     if opsbranch is None:
         opsbranch = env.branch
@@ -406,10 +335,9 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
         ready_branch(opsbranch, invenio_srcdir)
         ready_branch(inspirebranch, inspire_srcdir)
 
-    if needs_autoconf:
-        choice = prompt("Do you want to run autoconf? (Y/n)", default="yes")
-        if choice.lower() in ["y", "ye", "yes"]:
-            autoconf()
+    choice = prompt("Do you want to run autoconf? (Y/n)", default="yes")
+    if choice.lower() in ["y", "ye", "yes"]:
+        autoconf()
 
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
@@ -462,16 +390,12 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
         recipe_text += "sudo /etc/init.d/httpd reload\n"
 
     recipe_text += "#+END_SRC"
-    print
-
     recipe_text = ready_command_file(recipe_text)
-    print '#+BEGIN_SRC sh'
-    print recipe_text
-    print '#+END_SRC'
     cmd_filename = save_command_file(recipe_text)
     if not cmd_filename:
         print("ERROR: No command file")
         sys.exit(1)
+
     hosts_touched = []
     executed_commands = None
 
@@ -480,12 +404,16 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
     for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
         # For every host in defined role, perform deploy
         with settings(host_string=host):
+            stop_bibsched()
+            execute(disable, host)
             executed = perform_deploy(cmd_filename, invenio_srcdir)
             # FIXME - we want log per node! This is "un peu retard"
             if not executed_commands:
                 executed_commands = executed
             install_jquery_plugins()
             hosts_touched.append(host)
+            ping_host(host)
+            execute(enable, host)
 
     # Logging?
     if env.dolog:
@@ -500,6 +428,8 @@ First, wait for bibsched jobs to stop and put the queue to manual mode
 
             log_filename = _safe_mkstemp()
             log_deploy(log_filename, executed_commands, log_text, CFG_LOG_EMAIL)
+            print("Log sent")
+    _print_end_message()
 
 
 @task
@@ -545,6 +475,8 @@ def deploy(branch=None, commitid=None,
             log_text = out.split("#+END_EXAMPLE")[0]
             log_filename = _safe_mkstemp()
             log_deploy(log_filename, executed_commands, log_text, CFG_LOG_EMAIL)
+            print("Log sent!")
+    _print_end_message()
 
 
 @task
@@ -560,14 +492,13 @@ def perform_deploy(cmd_filename, repodir=None):
     if not repodir:
         raise Exception("Error: No repodir")
 
-    choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
-    if choice.lower() in ["y", "ye", "yes"]:
-        local("%s %s" % (CFG_EDITOR, cmd_filename))
-
     print "--- COMMANDS TO RUN ---"
     with open(cmd_filename) as filecontent:
         print filecontent.read()
     print "--- END OF COMMANDS ---"
+    choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
+    if choice.lower() in ["y", "ye", "yes"]:
+        local("%s %s" % (CFG_EDITOR, cmd_filename))
     choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string, ), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
         return []
@@ -581,11 +512,10 @@ def perform_deploy(cmd_filename, repodir=None):
                 current_directory = command[3:]
             elif "httpd" in command and env.graceful_reload is True:
                 # We are touching apache. Should we take out the node?
-                print env.roles
-                execute(disable, env.roles[0])
+                execute(disable, env.host_string)
                 _run_command(current_directory, command)
                 ping_host(env.host_string)
-                execute(enable, env.roles[0])
+                execute(enable, env.host_string)
             else:
                 _run_command(current_directory, command)
             executed_commands.append(command)
@@ -604,11 +534,11 @@ def check_branch(base_branch, repodir=None):
 
     with cd(repodir):
         files_to_check = run("git log HEAD..%s --pretty=format: --name-only | grep '\.py'" %
-                                  base_branch)
+                             base_branch)
         for filepath in files_to_check.split('\n'):
             if exists(filepath):
                 run("python modules/miscutil/lib/kwalitee.py --check-all %s" %
-                        (filepath, ), warn_only=True)
+                    (filepath, ), warn_only=True)
 
 
 @task
@@ -646,16 +576,26 @@ def ready_branch(branch=None, repodir=None, repo=None):
 
 @roles(['proxy'])
 @task
-def disable(server=None):
+def disable(host):
     """
     Disable a server in the haproxy configuration. Use with proxy.
+
+    host is expected to be the full host-name such as: pcudssw1504.cern.ch
     """
+    backends = env.proxybackends
+    if not backends:
+        print("No backends defined")
+        return
+
+    server = None
+    for alias, item in backends.items():
+        # item = ('hostname', [list of backends])
+        hostname, list_of_backends = item
+        if hostname in host:
+            server = alias
+            break
     if not server:
         print("No server defined")
-        return
-    backends = env.proxybackends
-    if not backends or server not in backends:
-        print("No backends defined")
         return
 
     servername, backends = backends[server]
@@ -668,16 +608,26 @@ def disable(server=None):
 
 @roles(['proxy'])
 @task
-def enable(server=None):
+def enable(host):
     """
     Enable a server in the haproxy configuration. Use with proxy.
+
+    host is expected to be the full host-name such as: pcudssw1504.cern.ch
     """
+    backends = env.proxybackends
+    if not backends:
+        print("No backends defined")
+        return
+
+    server = None
+    for alias, item in backends.items():
+        # item = ('hostname', [list of backends])
+        hostname, list_of_backends = item
+        if hostname in host:
+            server = alias
+            break
     if not server:
         print("No server defined")
-        return
-    backends = env.proxybackends
-    if not backends or server not in backends:
-        print("No backends defined")
         return
 
     servername, backends = backends[server]
@@ -695,10 +645,8 @@ def unit():
     """
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
-    sudo("%(prefix)s/bin/inveniocfg --run-unit-tests" % {
-            'apache': apacheuser,
-            'prefix': prefixdir,
-        }, user=apacheuser)
+    sudo("%(prefix)s/bin/inveniocfg --run-unit-tests" % (prefixdir,),
+         user=apacheuser)
 
 
 @task
@@ -846,3 +794,11 @@ def _safe_mkstemp():
     os.close(fd_commands)
     return filename_commands
 
+
+def _print_end_message():
+    print
+    print("Deployment completed!")
+    print
+    print("Remember to push the changes to the operations repository!")
+    print("`$ git push origin prod` or `$ git push ops prod` etc.")
+    print
