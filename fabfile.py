@@ -3,6 +3,7 @@ import re
 import traceback
 import os
 import sys
+import urllib2
 
 from functools import wraps
 from tempfile import mkstemp
@@ -84,12 +85,15 @@ env.proxybackends = {
     'prod4': ['pcudssw1504', prod_backends],
 }
 
+
+env.graceful_reload = False
 env.branch = ""
 env.fetch = None
 env.repodir = ""
 env.dolog = True
 env.roles_aux = []
-env.mi_roles = []
+env.roles_aux = []
+
 
 def task(f):
     @wraps(f)
@@ -159,6 +163,7 @@ def dev():
     Activate configuration for INSPIRE DEV server.
     """
     env.roles = ['dev']
+    env.roles_aux = ['dev']
     env.dolog = False
     env.branch = "dev"
 
@@ -169,6 +174,7 @@ def test():
     Activate configuration for INSPIRE TEST server.
     """
     env.roles = ['test']
+    env.roles_aux = ['test']
     env.dolog = False
     env.branch = "test"
 
@@ -179,10 +185,9 @@ def prod():
     Activate configuration for INSPIRE PROD main server.
     """
     env.roles = ['prod_main']
-    env.roles_aux = ['prod_aux']
+    env.roles_aux = ['prod1', 'prod2', 'prod3', 'prod4']
     env.dolog = True
     env.branch = "prod"
-    env.mi_roles = ['prod1', 'prod2', 'prod3', 'prod4']
 
 
 @task
@@ -196,7 +201,7 @@ def prod1():
     Activate configuration for INSPIRE PROD 1.
     """
     env.roles += ['prod1']
-    env.mi_roles += ['prod1']
+    env.roles_aux += ['prod1']
     env.dolog = True
     env.branch = "prod"
 
@@ -207,7 +212,7 @@ def prod2():
     Activate configuration for INSPIRE PROD 2.
     """
     env.roles += ['prod2']
-    env.mi_roles += ['prod2']
+    env.roles_aux += ['prod2']
     env.dolog = True
     env.branch = "prod"
 
@@ -218,7 +223,7 @@ def prod3():
     Activate configuration for INSPIRE PROD 3.
     """
     env.roles += ['prod3']
-    env.mi_roles += ['prod3']
+    env.roles_aux += ['prod3']
     env.dolog = True
     env.branch = "prod"
 
@@ -229,7 +234,7 @@ def prod4():
     Activate configuration for INSPIRE PROD 4.
     """
     env.roles += ['prod4']
-    env.mi_roles += ['prod4']
+    env.roles_aux += ['prod4']
     env.dolog = True
     env.branch = "prod"
 
@@ -258,34 +263,44 @@ def repo(repo):
     env.fetch = repo
 
 
+@task
+def graceful():
+    """
+    Be graceful when reloading apache by taking the node out of rotation and
+    by performing a request to load workers.
+    """
+    env.graceful_reload = True
+
+
 # MAIN TASKS
 
 @task
 def safe_makeinstall(opsbranch=None, inspirebranch="master",
-                                                          reload_apache="yes"):
+                     reload_apache="yes"):
     # Remove roles for makeinstall to not run all the hosts at once.
     env.roles = []
-    env.roles_aux = []
     env.dolog = False
     needs_autoconf = True
-    print 'targets', env.mi_roles
-    for target in env.mi_roles:
-        if target == env.mi_roles[-1]:
+    print 'targets', env.roles_aux
+    for target in env.roles_aux:
+        if target == env.roles_aux[-1]:
             env.dolog = True
         with settings(roles=[target]):
             execute(stop_bibsched, target)
         execute(disable, target)
         with settings(roles=[target]):
             env.roles = [target]
-            execute(makeinstall, opsbranch=opsbranch,
-                                 inspirebranch=inspirebranch,
-                                 reload_apache=reload_apache,
-                                 needs_autoconf=needs_autoconf)
+            env.roles_aux = [target]
+            execute(makeinstall,
+                    opsbranch=opsbranch,
+                    inspirebranch=inspirebranch,
+                    reload_apache=reload_apache,
+                    needs_autoconf=needs_autoconf)
+        ping_host(env.host_string)
         execute(enable, target)
         needs_autoconf = False
         # FIXME for logs later on:
         # env.dolog = True
-
 
 
 @task
@@ -403,6 +418,7 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
     #+BEGIN_SRC sh
     sudo -u %(apache)s /usr/bin/id
     cd %(opsdir)s
+    make -s clean
     make -s
     sudo -u %(apache)s make -s install
     """ % {'apache': apacheuser,
@@ -456,24 +472,20 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", nee
     if not cmd_filename:
         print("ERROR: No command file")
         sys.exit(1)
-
-    hosts_touched = env.hosts
-    executed_commands = perform_deploy(cmd_filename, invenio_srcdir)
-
-    install_jquery_plugins()
+    hosts_touched = []
+    executed_commands = None
 
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
     for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
-        choice = prompt("Press enter to run these commands on %s" % host)
         # For every host in defined role, perform deploy
         with settings(host_string=host):
-            hosts_touched.append(host)
             executed = perform_deploy(cmd_filename, invenio_srcdir)
             # FIXME - we want log per node! This is "un peu retard"
             if not executed_commands:
                 executed_commands = executed
             install_jquery_plugins()
+            hosts_touched.append(host)
 
     # Logging?
     if env.dolog:
@@ -491,8 +503,8 @@ First, wait for bibsched jobs to stop and put the queue to manual mode
 
 
 @task
-def deploy(branch=None, commitid=None, recipeargs=CFG_DEFAULT_RECIPE_ARGS,
-                                                                 repodir=None):
+def deploy(branch=None, commitid=None,
+           recipeargs=CFG_DEFAULT_RECIPE_ARGS, repodir=None):
     """
     Do a deployment in given repository using any commitid
     and recipe arguments given.
@@ -518,15 +530,13 @@ def deploy(branch=None, commitid=None, recipeargs=CFG_DEFAULT_RECIPE_ARGS,
         print("ERROR: No command file")
         sys.exit(1)
 
-    executed_commands = perform_deploy(cmd_filename, repodir)
-
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
-    for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
-        choice = prompt("Press enter to run these commands on %s" % host)
+    for role in env.roles_aux:
+        choice = prompt("Press enter to run these commands on %s" % role)
         # For every host in defined role, perform deploy
-        with settings(host_string=host):
-            perform_deploy(cmd_filename, repodir)
+        with settings(roles=[role]):
+            executed_commands = perform_deploy(cmd_filename, repodir)
 
     # Logging?
     if env.dolog:
@@ -569,6 +579,13 @@ def perform_deploy(cmd_filename, repodir=None):
             command = command.strip()
             if command.startswith('cd '):
                 current_directory = command[3:]
+            elif "httpd" in command and env.graceful_reload is True:
+                # We are touching apache. Should we take out the node?
+                print env.roles
+                execute(disable, env.roles[0])
+                _run_command(current_directory, command)
+                ping_host(env.host_string)
+                execute(enable, env.roles[0])
             else:
                 _run_command(current_directory, command)
             executed_commands.append(command)
@@ -682,6 +699,17 @@ def unit():
             'apache': apacheuser,
             'prefix': prefixdir,
         }, user=apacheuser)
+
+
+@task
+def ping_host(target):
+    """
+    Does a simple request of the targets web app. Used to load workers.
+    """
+    if not target.startswith("http"):
+        target = "http://%s/" % (target)
+    print "Pinging %s..." % (target,)
+    urllib2.urlopen(target).read()
 
 
 pull_changes = ready_branch
@@ -817,3 +845,4 @@ def _safe_mkstemp():
                                              dir=CFG_CMDDIR)
     os.close(fd_commands)
     return filename_commands
+
