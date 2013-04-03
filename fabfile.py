@@ -397,7 +397,7 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes",
         sys.exit(1)
 
     hosts_touched = []
-    executed_commands = None
+    executed_commands = {}
 
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
@@ -406,10 +406,8 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes",
         with settings(host_string=host):
             stop_bibsched()
             execute(disable, host)
-            executed = perform_deploy(cmd_filename, invenio_srcdir)
-            # FIXME - we want log per node! This is "un peu retard"
-            if not executed_commands:
-                executed_commands = executed
+            res = execute(perform_deploy, cmd_filename, invenio_srcdir)
+            executed_commands.update(res)
             install_jquery_plugins()
             hosts_touched.append(host)
             ping_host(host)
@@ -462,11 +460,13 @@ def deploy(branch=None, commitid=None,
 
     # Run commands (allowing user to edit them beforehand)
     # Users can also run the commands on other hosts right away
+    executed_commands = {}
     for role in env.roles_aux:
         choice = prompt("Press enter to run these commands on %s" % role)
         # For every host in defined role, perform deploy
         with settings(roles=[role]):
-            executed_commands = perform_deploy(cmd_filename, repodir)
+            res = execute(perform_deploy, cmd_filename, repodir)
+            executed_commands.update(res)
 
     # Logging?
     if env.dolog:
@@ -712,11 +712,24 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
     """
     Perform logging of deployment using executed commands. Sends a mail
     to given mailaddress with deploy log.
+
+    executed_commands is a dictionary of host -> executed_commands
     """
+    out = []
+    out.append(log)
+    out.append("#+END_EXAMPLE")
+    for host, executed in executed_commands.items():
+        out.append("")  # Some spacing
+        out.append("On host %s:" % (host,))
+        out.append("")  # Some spacing
+        out.append("#+BEGIN_SRC sh")
+        for cmd in executed:
+            out.append(cmd)
+        out.append("#+END_SRC")
+
     # Write default logs
     log_file = open(log_filename, 'w')
-    log_file.write("%s\n#+END_EXAMPLE\n\n#+BEGIN_SRC sh\n%s\n#+END_SRC\n" \
-                                         % (log, "\n".join(executed_commands)))
+    log_file.write("\n".join(out))
     log_file.close()
 
     # Open log for edit
@@ -726,11 +739,11 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
         full_log = logs.readlines()
         subject = full_log[0]
         content = "".join(full_log[1:])
-        if send_email(fromaddr=CFG_FROM_EMAIL, \
-                      toaddr=log_mail, \
-                      subject=subject, \
-                      content=content, \
-                      header="", \
+        if send_email(fromaddr=CFG_FROM_EMAIL,
+                      toaddr=log_mail,
+                      subject=subject,
+                      content=content,
+                      header="",
                       footer=""):
             print "Email sent to %s" % (log_mail,)
         else:
