@@ -22,7 +22,7 @@ def loop(recids, callback):
 
 def wait_for_task(task_id):
     sql = 'select status from schTASK where id = %s'
-    while run_sql(sql, [task_id])[0][0] not in ('DONE', 'ACK'):
+    while run_sql(sql, [task_id])[0][0] not in ('DONE', 'ACK', 'ACK DONE'):
         time.sleep(5)
 
 
