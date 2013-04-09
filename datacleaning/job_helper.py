@@ -22,7 +22,7 @@ def loop(recids, callback):
 
 def wait_for_task(task_id):
     sql = 'select status from schTASK where id = %s'
-    while run_sql(sql, [task_id])[0][0] != 'DONE':
+    while run_sql(sql, [task_id])[0][0] not in ('DONE', 'ACK'):
         time.sleep(5)
 
 
@@ -67,7 +67,7 @@ def submit_refextract_task(to_update, user, priority=3):
     recids = [str(r) for r in to_update]
     return task_low_level_submission('refextract', user,
                                      '-P', str(priority),
-                                     '-i', ','.join(recids))
+                                     '--recids', ','.join(recids))
 
 
 class ChunkedTask(object):

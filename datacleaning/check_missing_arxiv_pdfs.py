@@ -6,7 +6,7 @@ from invenio.dbquery import run_sql
 from invenio.bibtask import task_low_level_submission
 
 
-def submit_task(to_submit, mode):
+def submit_task(to_submit):
     recids = ','.join(str(recid) for recid in to_submit)
     return task_low_level_submission('arxiv-pdf-checker', 'arxiv-pdf-check',
                                      '-P', '3', '-%r', recids)
