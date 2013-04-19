@@ -93,9 +93,14 @@ class ChunkedTask(object):
             self.to_submit = []
             self.submit_task(to_submit)
 
-    def __del__(self):
+    def cleanup(self):
         if self.to_submit:
-            self.submit_task(self.to_submit)
+            to_submit = self.to_submit
+            self.to_submit = []
+            self.submit_task(to_submit)
+
+    def __del__(self):
+        self.cleanup()
 
 
 class ChunkedBibUpload(ChunkedTask):
