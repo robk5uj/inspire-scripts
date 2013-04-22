@@ -645,7 +645,7 @@ def unit():
     """
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
-    sudo("%(prefix)s/bin/inveniocfg --run-unit-tests" % (prefixdir,),
+    sudo("%s/bin/inveniocfg --run-unit-tests" % (prefixdir,),
          user=apacheuser)
 
 
