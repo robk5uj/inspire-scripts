@@ -582,6 +582,9 @@ def disable(host):
 
     host is expected to be the full host-name such as: pcudssw1504.cern.ch
     """
+    if isinstance(host, basestring):
+        host = [host]
+
     backends = env.proxybackends
     if not backends:
         print("No backends defined")
@@ -591,7 +594,7 @@ def disable(host):
     for alias, item in backends.items():
         # item = ('hostname', [list of backends])
         hostname, list_of_backends = item
-        if hostname in host:
+        if hostname in host or alias in host:
             server = alias
             break
     if not server:
@@ -614,6 +617,10 @@ def enable(host):
 
     host is expected to be the full host-name such as: pcudssw1504.cern.ch
     """
+
+    if isinstance(host, basestring):
+        host = [host]
+
     backends = env.proxybackends
     if not backends:
         print("No backends defined")
@@ -623,7 +630,7 @@ def enable(host):
     for alias, item in backends.items():
         # item = ('hostname', [list of backends])
         hostname, list_of_backends = item
-        if hostname in host:
+        if hostname in host or alias in host:
             server = alias
             break
     if not server:
@@ -657,7 +664,15 @@ def ping_host(target):
     if not target.startswith("http"):
         target = "http://%s/" % (target)
     print "Pinging %s..." % (target,)
-    urllib2.urlopen(target).read()
+    while True:
+        try:
+            urllib2.urlopen(target).read()
+            break
+        except urllib2.HTTPError, e:
+            print e
+            time.sleep(1)
+
+
 
 
 pull_changes = ready_branch
