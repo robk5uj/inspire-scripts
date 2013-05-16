@@ -512,10 +512,11 @@ def perform_deploy(cmd_filename, repodir=None):
                 current_directory = command[3:]
             elif "httpd" in command and env.graceful_reload is True:
                 # We are touching apache. Should we take out the node?
-                execute(disable, env.host_string)
+                target = env.roles[0]
+                execute(disable, target)
                 _run_command(current_directory, command)
                 ping_host(env.host_string)
-                execute(enable, env.host_string)
+                execute(enable, target)
             else:
                 _run_command(current_directory, command)
             executed_commands.append(command)
@@ -688,7 +689,7 @@ def proxy_action(server, backends, action="enable"):
         current_server = server + current_server_suffix
         cmd = 'echo "%s server %s/%s" | sudo nc -U /var/lib/haproxy/stats' \
                % (action, backend, current_server)
-        sudo(cmd)
+        run(cmd)
 
 
 def ready_command_file(out):
