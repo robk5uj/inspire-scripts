@@ -8,9 +8,9 @@ from invenio.config import CFG_TMPSHAREDDIR
 from invenio.bibtask import task_low_level_submission
 
 
-def all_recids():
+def all_recids(start=1):
     max_id = run_sql("SELECT max(id) FROM bibrec")[0][0]
-    return xrange(1, max_id + 1)
+    return xrange(start, max_id + 1)
 
 
 def loop(recids, callback):
