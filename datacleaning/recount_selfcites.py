@@ -14,9 +14,7 @@ def main():
     selfcites = fromDB('selfcites')
 
     def cb_process_one(recid):
-        actual_counts = run_sql('SELECT COUNT(*) FROM rnkSELFCITEDICT WHERE citee = %s', [recid])[0][0]
-        if actual_counts and recid not in selfcites:
-            bibrank.add(recid)
+        bibrank.add(recid)
 
     loop(all_recids(), cb_process_one)
 
