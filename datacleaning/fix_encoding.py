@@ -1,12 +1,13 @@
 import sys
 
-from invenio.search_engine import get_record
+from invenio.search_engine import get_record as get_record_orig
 from invenio.docextract_record import BibRecordControlField, \
                                       BibRecordField, \
                                       BibRecord, \
-                                      BibRecordSubField
+                                      BibRecordSubField, \
+                                      get_record
 
-from job_helper import ChunkedBibUpload
+from job_helper import ChunkedBibUpload, all_recids
 
 
 SCRIPT_NAME = 'fix-encoding'
@@ -32,14 +33,20 @@ def convert_record(bibrecord):
 
 
 def fix_encoding(recid):
-    return convert_record(get_record(recid)).to_xml()
+    return convert_record(get_record_orig(recid)).to_xml()
 
 
 def main():
     bibupload = ChunkedBibUpload(mode='c', user=SCRIPT_NAME, notimechange=True)
-    for recid in sys.argv[1:]:
-        bibupload.add(fix_encoding(int(recid)))
-
+    recids = sys.argv[1:]
+    if '*' in recids:
+        recids = all_recids()
+    for recid in recids:
+        try:
+            get_record(recid)
+        except UnicodeDecodeError:
+            bibupload.add(fix_encoding(int(recid)))
+    bibupload.cleanup()
 
 if __name__ == '__main__':
     main()
