@@ -748,8 +748,13 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
     log_file.write("\n".join(out))
     log_file.close()
 
+    options = ""
+    if CFG_EDITOR in ["subl", "sublime", "sublime-text"]:
+        # Wait for sublime to close
+        options += "-w"
+
     # Open log for edit
-    local("%s %s" % (CFG_EDITOR, log_filename))
+    local("%s %s %s" % (CFG_EDITOR, options, log_filename))
 
     with open(log_filename) as logs:
         full_log = logs.readlines()
