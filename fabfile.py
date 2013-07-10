@@ -33,6 +33,8 @@ CFG_CMDDIR = os.environ.get('TMPDIR', '/tmp')
 CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 CFG_LOG_EMAIL = "admin@inspirehep.net"
 CFG_INVENIO_DEPLOY_RECIPE = "/afs/cern.ch/project/inspire/repo/invenio-create-deploy-recipe"
+FABRIC_DEPLOYMENT_LOCK_SCRIPT_PATH = "/afs/cern.ch/project/inspire/repo/fabric_deployment_check_lock.py"
+FABRIC_DEPLOYMENT_LOCK_PATH = "/afs/cern.ch/project/inspire/repo/fabric_deployment.lock"
 CFG_DEFAULT_RECIPE_ARGS = " --inspire --use-source --no-pull --via-filecopy"
 
 if os.environ.get('EDITOR'):
@@ -108,6 +110,25 @@ def task(f):
             sys.exit(1)
 
     return fab_task(fun)
+
+
+def with_lock(f):
+    @wraps(f)
+    def fun(*args, **kwargs):
+        if env.roles == ["test"] or env.roles == ["dev"]:
+            return f(*args, **kwargs)
+        with hide("output"):
+            error_code = run("python %s %s" % (FABRIC_DEPLOYMENT_LOCK_SCRIPT_PATH, FABRIC_DEPLOYMENT_LOCK_PATH))
+        if int(error_code):
+            sys.stderr.write("Error: another user is performing a deployment.\n")
+            choice = prompt("Are you sure you want to continue? [NOT recommended] (y/N)", default="no")
+            if choice.lower() not in ["y", "ye", "yes"]:
+                sys.exit(1)
+        try:
+            return f(*args, **kwargs)
+        finally:
+            run("rm -f %s" % FABRIC_DEPLOYMENT_LOCK_PATH)
+    return fun
 
 
 @task
@@ -431,6 +452,7 @@ First, wait for bibsched jobs to stop and put the queue to manual mode
 
 
 @task
+@with_lock
 def deploy(branch=None, commitid=None,
            recipeargs=CFG_DEFAULT_RECIPE_ARGS, repodir=None):
     """
