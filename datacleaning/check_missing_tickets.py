@@ -8,22 +8,8 @@ from invenio.dbquery import run_sql
 from invenio.bibrank_tag_based_indexer import fromDB
 from invenio.search_engine_utils import get_fieldvalues
 from invenio.bibcatalog_system_rt import BibCatalogSystemRT
-from invenio.arxiv_pdf_checker import extract_arxiv_ids_from_recid
-from invenio.search_engine import get_record
-from invenio.bibfilter_oaiarXiv2inspire import generate_ticket
 
 SCRIPT_NAME = 'missing-tickets'
-QUEUE = 'HEP_curation'
-
-def create_ticket(recid, bibcatalog_system):
-    record = get_record(recid)
-    subject, text = generate_ticket(record)
-    ticket_id = bibcatalog_system.ticket_submit(subject=subject,
-                                                queue=QUEUE,
-                                                recordid=recid)
-    bibcatalog_system.ticket_comment(None,
-                                     ticket_id,
-                                     text)
 
 
 def main():
@@ -32,10 +18,22 @@ def main():
     bibcatalog_system = BibCatalogSystemRT()
 
     def cb_process_one(recid):
-        collections = get_fieldvalues(recid, "980__a")
-        if 'CORE' not in collections:
+        # Do not create tickets for old records
+        creation_date = run_sql("""SELECT creation_date FROM bibrec
+                                   WHERE id = %s""", [recid])[0][0]
+        if creation_date < now - timedelta(days=365*2):
             return
-        if 'arXiv' not in collections:
+
+        in_core = False
+        in_arxiv = False
+        for collection in get_fieldvalues(recid, "980__a"):
+            if collection == 'CORE':
+                in_core = True
+            elif collection == 'arXiv':
+                in_arxiv = True
+
+        # Only create tickets for HEP
+        if not in_core or not in_arxiv:
             return
 
         for category in get_fieldvalues(recid, '037__c'):
@@ -43,19 +41,26 @@ def main():
                 # We do not curate astro-ph
                 return
 
+        if not get_fieldvalues(recid, '999C6v'):
+            return
+
         results = bibcatalog_system.ticket_search(None,
                                                   recordid=recid,
-                                                  queue=QUEUE)
+                                                  queue='Inspire-References')
+        if results:
+            return
+
+        results = bibcatalog_system.ticket_search(None,
+                                                  recordid=recid,
+                                                  queue='HEP_curation')
         if results:
             return
 
         print 'missing ticket for #%s' % recid
         recids.add(recid)
 
-        create_ticket(recid, bibcatalog_system)
-
-
-    loop(all_recids(start=1232152), cb_process_one)
+    # 1118858 is the first refextract ticket
+    loop(all_recids(start=1119023), cb_process_one)
 
     print recids
     print len(recids)

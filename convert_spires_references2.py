@@ -15,8 +15,7 @@ def convert_references_file(path):
 
 
 def convert_references(text):
-    for counter, line in enumerate(text):
-        dummy, ref = line.split('=', 1)
+    for counter, ref in enumerate(text):
         ref = ref.strip().strip(';%<> ')
         # Journal ?
         if ARXIV_MARKER in ref:
