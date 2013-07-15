@@ -88,9 +88,10 @@ env.proxybackends = {
 }
 
 
-env.graceful_reload = False
+env.graceful_reload = True
 env.branch = ""
 env.fetch = None
+env.reset = True
 env.repodir = ""
 env.dolog = True
 env.roles_aux = []
@@ -293,7 +294,25 @@ def graceful():
     env.graceful_reload = True
 
 
+@task
+def nograceful():
+    """
+    Be graceful when reloading apache by taking the node out of rotation and
+    by performing a request to load workers.
+    """
+    env.graceful_reload = False
+
+
+@task
+def noreset():
+    """
+    Enabling this flag will not run 'git reset --hard' given branch. Use with care!
+    """
+    env.reset = False
+
+
 # MAIN TASKS
+
 
 @task
 def safe_makeinstall(opsbranch=None, inspirebranch="master",
@@ -470,7 +489,10 @@ def deploy(branch=None, commitid=None,
         sys.exit(1)
 
     # Prepare remote version of the given branch for deployment
-    ready_branch(branch=branch, repodir=repodir)
+    if env.reset:
+        ready_branch(branch=branch, repodir=repodir)
+    else:
+        print("Warning! Skipping reset")
 
     # Prepare list of commands to run
     out = _get_recipe(repodir, recipeargs, commitid)
@@ -484,7 +506,7 @@ def deploy(branch=None, commitid=None,
     # Users can also run the commands on other hosts right away
     executed_commands = {}
     for role in env.roles_aux:
-        choice = prompt("Press enter to run these commands on %s" % role)
+        choice = prompt("Press enter to prepare commands for %s" % role)
         # For every host in defined role, perform deploy
         with settings(roles=[role]):
             res = execute(perform_deploy, cmd_filename, repodir)
@@ -514,14 +536,18 @@ def perform_deploy(cmd_filename, repodir=None):
     if not repodir:
         raise Exception("Error: No repodir")
 
-    print "--- COMMANDS TO RUN ---"
-    with open(cmd_filename) as filecontent:
-        print filecontent.read()
-    print "--- END OF COMMANDS ---"
-    choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
-    if choice.lower() in ["y", "ye", "yes"]:
-        local("%s %s" % (CFG_EDITOR, cmd_filename))
-    choice = prompt("Run these commands on %s? (Y/n)" % (env.host_string, ), default="yes")
+    done_editing = False
+    print_command_file(cmd_filename)
+
+    while not done_editing:
+        choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
+        if choice.lower() in ["y", "ye", "yes"]:
+            local("%s %s" % (CFG_EDITOR, cmd_filename))
+            print_command_file(cmd_filename)
+        else:
+            done_editing = True
+
+    choice = prompt("Run these commands on %s? (Y/n) (answering 'No' will skip this node)" % (env.host_string, ), default="yes")
     if choice.lower() not in ["y", "ye", "yes"]:
         return []
 
@@ -744,6 +770,16 @@ def save_command_file(out):
             os.remove(cmd_filename)
         raise
     return cmd_filename
+
+
+def print_command_file(cmd_filename):
+    """
+    Will print the commands listed in the given file.
+    """
+    print "--- COMMANDS TO RUN ---"
+    with open(cmd_filename) as filecontent:
+        print filecontent.read()
+    print "--- END OF COMMANDS ---"
 
 
 def log_deploy(log_filename, executed_commands, log, log_mail):
