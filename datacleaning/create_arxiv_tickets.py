@@ -10,13 +10,16 @@ from invenio.search_engine_utils import get_fieldvalues
 from invenio.bibcatalog_system_rt import BibCatalogSystemRT
 from invenio.arxiv_pdf_checker import extract_arxiv_ids_from_recid
 from invenio.search_engine import get_record
-from invenio.bibfilter_oaiarXiv2inspire import generate_ticket
+from invenio.bibfilter_oaiarXiv2inspire import generate_ticket, \
+                                               get_minimal_arxiv_id
 
 SCRIPT_NAME = 'missing-tickets'
 QUEUE = 'HEP_curation'
 
 def create_ticket(recid, bibcatalog_system):
     record = get_record(recid)
+    if not get_minimal_arxiv_id(record):
+        return
     subject, text = generate_ticket(record)
     ticket_id = bibcatalog_system.ticket_submit(subject=subject,
                                                 queue=QUEUE,
