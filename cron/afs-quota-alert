@@ -1,0 +1,15 @@
+#!/bin/bash
+
+function checkquota {
+	OUT=$(for i in  $1* ; do fs lq $i ;done | grep WARNING)
+	HOSTNAME=`hostname`
+	if [ ! -z "$OUT" ] ; then
+    	mail -s "$HOSTNAME: AFS quota alert" admin@inspirehep.net <<EOF
+Following warnings have been detected: $OUT
+EOF
+	fi
+}
+
+checkquota /afs/cern.ch/project/inspire/PROD/var/data/files/
+
+exit 0
