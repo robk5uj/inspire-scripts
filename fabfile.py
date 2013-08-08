@@ -12,18 +12,18 @@ from tempfile import mkstemp
 from itertools import chain
 
 import fabric.state
-from fabric.api import run, \
-                       task as fab_task, \
-                       env, \
-                       settings, \
-                       local, \
-                       cd, \
-                       sudo, \
-                       lcd, \
-                       hide, \
-                       roles, \
-                       execute
-from fabric.operations import prompt
+from fabric.api import (run,
+                        task as fab_task,
+                        env,
+                        settings,
+                        local,
+                        cd,
+                        sudo,
+                        lcd,
+                        hide,
+                        roles,
+                        execute)
+from fabric.operations import prompt, get, put
 from fabric.contrib.files import exists
 
 from invenio.mailutils import send_email
@@ -859,6 +859,46 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
             print "ERROR: Email not sent"
             print subject
             print content
+
+
+@task
+def edit_conf(update_config_py=True, reload_apache=False):
+    config_filename = None
+    try:
+        for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
+            # For every host in defined role, perform deploy
+            with settings(host_string=host):
+                prefixdir = run("echo $CFG_INVENIO_PREFIX")
+                remote_path = os.path.join(prefixdir, 'etc', 'invenio-local.conf')
+                apacheuser = run("echo $CFG_INVENIO_USER")
+
+                if config_filename is None:
+                    config_filename = _safe_mkstemp()
+                    get(remote_path=remote_path,
+                        local_path=config_filename)
+                    local("%s %s" % (CFG_EDITOR, config_filename))
+
+                with settings(sudo_user=apacheuser):
+                    put(config_filename, remote_path, use_sudo=True)
+
+                if update_config_py and update_config_py != 'no':
+                    command = os.path.join(prefixdir, 'bin', 'inveniocfg')
+                    command = "%s --update-config-py" % command
+                    sudo(command, user=apacheuser)
+
+                if reload_apache and reload_apache != 'no':
+                    command = '/etc/init.d/httpd reload'
+                    for target in env.roles:
+                        execute(disable, target)
+                        sudo(command, user='root')
+                        ping_host(env.host_string)
+                        execute(enable, target)
+
+    finally:
+        if config_filename:
+            os.unlink(config_filename)
+
+
 
 # HELPER FUNCTIONS
 
