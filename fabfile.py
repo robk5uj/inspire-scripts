@@ -1,3 +1,5 @@
+  # pylint: disable=C0103
+
 import time
 import re
 import traceback
@@ -109,7 +111,7 @@ def task(f):
     def fun(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except Exception, e:
+        except Exception, e:  # pylint: disable-msg=W0703
             if fabric.state.output.debug:
                 traceback.print_exc()
             else:
@@ -148,9 +150,9 @@ def origin():
 
 @task
 def localhost():
-    global run, cd, exists, sudo
+    global run, cd, exists, sudo  # pylint: disable-msg=W0602
 
-    def sudo(cmd, user=None, shell=False):
+    def sudo(cmd, user=None, shell=False):  # pylint: disable-msg=W0621,W0612
         if user:
             user_str = '-u %s ' % user
         else:
@@ -159,7 +161,7 @@ def localhost():
             cmd = 'bash -c "%s"'
         return run('sudo %s%s' % (user_str, cmd))
 
-    def run(cmd, shell=True, warn_only=False):
+    def run(cmd, shell=True, warn_only=False):  # pylint: disable-msg=W0621
         if shell:
             shell = 'sh'
         else:
@@ -177,10 +179,10 @@ def localhost():
         print r
         return r
 
-    def cd(*args, **kwargs):
+    def cd(*args, **kwargs):  # pylint: disable-msg=W0621,W0612
         return lcd(*args, **kwargs)
 
-    def exists(path):
+    def exists(path):  # pylint: disable-msg=W0621,W0612
         with settings(hide('everything'), warn_only=True):
             return run('test -e "$(echo %s)"' % path, warn_only=True).succeeded
 
@@ -284,11 +286,11 @@ def inspire():
 
 
 @task
-def repo(repo):
+def repo(repository):
     """
     Pull changes into checked out branch
     """
-    env.fetch = repo
+    env.fetch = repository
 
 
 @task
@@ -319,17 +321,9 @@ def noreset():
 
 # MAIN TASKS
 
-
 @task
-def safe_makeinstall(opsbranch=None, inspirebranch="master",
-                     reload_apache="yes"):
-    makeinstall(opsbranch, inspirebranch, reload_apache, True)
-
-
-@task
-def mi(opsbranch=None, inspirebranch="master", reload_apache="yes",
-       safe=False):
-    makeinstall(opsbranch, inspirebranch, reload_apache, safe)
+def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
+    makeinstall(opsbranch, inspirebranch, reload_apache)
 
 
 @task
@@ -362,8 +356,7 @@ def stop_bibsched():
 
 
 @task
-def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes",
-                safe=False):
+def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
     """
     This task implement the recipe to re-install the server. Use the safe flag
     to disable bibsched on the node and to safely disable the node in haproxy
@@ -402,8 +395,6 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes",
     cd %(inspiredir)s
     sudo -u %(apache)s make -s install
     """ % {'apache': apacheuser,
-           'opsdir': invenio_srcdir,
-           'prefixdir': prefixdir,
            'inspiredir': inspire_srcdir}
 
     if 'dev' in env.roles:
@@ -413,7 +404,7 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes",
         recipe_text += "sudo -u %s make reset-test-ui\n" % (apacheuser,)
 
     # Here we see if any of the current hosts are production machines, if so - special rules apply
-    is_production_machine = bool([True for role in env.roles \
+    is_production_machine = bool([True for role in env.roles
                                   if role.startswith('prod')])
     if is_production_machine:
         recipe_text += """
@@ -588,7 +579,7 @@ def check_branch(base_branch, repodir=None):
         raise Exception("No repodir")
 
     with cd(repodir):
-        files_to_check = run("git log HEAD..%s --pretty=format: --name-only | grep '\.py'" %
+        files_to_check = run("git log HEAD..%s --pretty=format: --name-only | grep '\\.py'" %
                              base_branch)
         for filepath in files_to_check.split('\n'):
             if exists(filepath):
@@ -605,12 +596,12 @@ def host_type():
 
 
 @task
-def reload_apache():
+def apache_graceful():
     run("sudo /etc/init.d/httpd graceful")
 
 
 @task
-def ready_branch(branch=None, repodir=None, repo=None):
+def ready_branch(branch=None, repodir=None, repository=None):
     """
     Connect to hosts and checkout given branch in given
     repository.
@@ -619,13 +610,13 @@ def ready_branch(branch=None, repodir=None, repo=None):
         branch = env.branch
     if repodir is None:
         repodir = env.repodir
-    if repo is None:
-        repo = env.fetch
+    if repository is None:
+        repository = env.fetch
 
     with cd(repodir):
-        if repo:
-            run("git fetch %s" % repo)
-            branch = "%s/%s" % (repo, branch)
+        if repository:
+            run("git fetch %s" % repository)
+            branch = "%s/%s" % (repository, branch)
         run("git reset --hard %s" % branch)
 
 
@@ -648,7 +639,7 @@ def disable(host):
     server = None
     for alias, item in backends.items():
         # item = ('hostname', [list of backends])
-        hostname, list_of_backends = item
+        hostname, dummy_list_of_backends = item
         if hostname in host or alias in host:
             server = alias
             break
@@ -684,7 +675,7 @@ def enable(host):
     server = None
     for alias, item in backends.items():
         # item = ('hostname', [list of backends])
-        hostname, list_of_backends = item
+        hostname, dummy_list_of_backends = item
         if hostname in host or alias in host:
             server = alias
             break
@@ -752,9 +743,9 @@ def ready_command_file(out):
         return
 
     # Get everything between SRC
-    src = "".join(re.findall("BEGIN_SRC sh\r?\n(.*)#\+END_SRC", str(out), re.S))
+    src = "".join(re.findall("BEGIN_SRC sh\r?\n(.*)#\\+END_SRC", str(out), re.S))
     # Take out stuff we don't want from the command list
-    cleaned_src = "\n".join([line.strip() for line in src.split("\n") \
+    cleaned_src = "\n".join([line.strip() for line in src.split("\n")
                  if line.strip() and not line.startswith(CFG_LINES_TO_IGNORE)])
 
     return cleaned_src
@@ -878,7 +869,7 @@ def _get_recipe(repodir, recipeargs, commitid=None):
         commitid_arg = " %s" % commitid
     else:
         commitid_arg = ""
-    return run('CFG_INVENIO_SRCDIR=%s %s%s%s' % \
+    return run('CFG_INVENIO_SRCDIR=%s %s%s%s' %
               (repodir, CFG_INVENIO_DEPLOY_RECIPE, recipeargs, commitid_arg))
 
 
@@ -887,7 +878,7 @@ def _safe_mkstemp():
     Create a tempfile in CFG_CMDDIR.
     """
     current_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    fd_commands, filename_commands = mkstemp(prefix="fab_commands_%s" % (current_time,), \
+    fd_commands, filename_commands = mkstemp(prefix="fab_commands_%s" % (current_time,),
                                              dir=CFG_CMDDIR)
     os.close(fd_commands)
     return filename_commands
