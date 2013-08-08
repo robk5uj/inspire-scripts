@@ -609,8 +609,28 @@ def host_type():
 
 
 @task
-def apache_graceful():
-    run("sudo /etc/init.d/httpd graceful")
+def reload_apache():
+    for role in env.roles_aux:
+        choice = prompt("Press enter to reload apache for %s" % role, default="yes")
+        if choice.lower() not in ["y", "ye", "yes"]:
+            continue
+        # For every host in defined role, perform deploy
+        with settings(roles=[role]):
+            if env.graceful_reload is True:
+                # We are touching apache. Should we take out the node?
+                target = env.roles[0]
+                execute(disable, target)
+                execute(do_reload_apache)
+                host_string = env.roledefs[target][0]
+                ping_host(host_string)
+                execute(enable, target)
+            else:
+                execute(do_reload_apache)
+
+
+@task
+def do_reload_apache():
+    _run_command("$HOME", "sudo /etc/init.d/httpd graceful")
 
 
 @task
