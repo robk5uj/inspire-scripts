@@ -41,11 +41,11 @@ def calculate_citation_history_coordinates(recid):
         result[year] = 0
 
     for recid in get_cited_by(recid):
-        rec_date = get_field_values(recid, '269__c')
+        rec_date = get_fieldvalues(recid, '269__c')
         if not rec_date:
-            rec_date = get_field_values(recid,'773__y')
+            rec_date = get_fieldvalues(recid, '773__y')
             if not rec_date:
-                rec_date = get_field_values(recid, '260__c')
+                rec_date = get_fieldvalues(recid, '260__c')
         # Some records simlpy do not have these fields
         if rec_date:
             # Maybe rec_date[0][0:4] has a typo and cannot

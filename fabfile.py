@@ -27,6 +27,12 @@ from fabric.contrib.files import exists
 from invenio.mailutils import send_email
 from invenio.config import CFG_SITE_ADMIN_EMAIL
 
+try:
+    import fabric_config_local
+except ImportError:
+    pass
+else:
+    fabric_config_local.init_env()
 
 CFG_LINES_TO_IGNORE = ("#", )
 CFG_CMDDIR = os.environ.get('TMPDIR', '/tmp')
