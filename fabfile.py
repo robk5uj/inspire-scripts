@@ -96,7 +96,7 @@ env.proxybackends = {
 }
 
 
-env.graceful_reload = True
+env.graceful_reload = False
 env.branch = ""
 env.fetch = None
 env.reset = True
@@ -218,6 +218,7 @@ def prod():
     env.roles_aux = ['prod1', 'prod2', 'prod3', 'prod4']
     env.dolog = True
     env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -234,6 +235,7 @@ def prod1():
     env.roles_aux += ['prod1']
     env.dolog = True
     env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -245,6 +247,7 @@ def prod2():
     env.roles_aux += ['prod2']
     env.dolog = True
     env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -256,6 +259,7 @@ def prod3():
     env.roles_aux += ['prod3']
     env.dolog = True
     env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -267,6 +271,7 @@ def prod4():
     env.roles_aux += ['prod4']
     env.dolog = True
     env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
