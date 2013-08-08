@@ -508,7 +508,6 @@ def deploy(branch=None, commitid=None,
     # Users can also run the commands on other hosts right away
     executed_commands = {}
     for role in env.roles_aux:
-        choice = prompt("Press enter to prepare commands for %s" % role)
         # For every host in defined role, perform deploy
         with settings(roles=[role]):
             res = execute(perform_deploy, cmd_filename, repodir)
