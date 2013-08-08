@@ -104,6 +104,7 @@ env.repodir = ""
 env.dolog = True
 env.roles_aux = []
 env.roles_aux = []
+env.noprompt = False
 
 
 def task(f):
@@ -324,6 +325,11 @@ def noreset():
     env.reset = False
 
 
+@task
+def noprompt():
+    env.noprompt = True
+
+
 # MAIN TASKS
 
 @task
@@ -540,7 +546,7 @@ def perform_deploy(cmd_filename, repodir=None):
     done_editing = False
     print_command_file(cmd_filename)
 
-    while not done_editing:
+    while not done_editing and not env.noprompt:
         choice = prompt("Edit the commands to be executed (between BEGIN_SRC and END_SRC)? (y/N)", default="no")
         if choice.lower() in ["y", "ye", "yes"]:
             local("%s %s" % (CFG_EDITOR, cmd_filename))
@@ -548,9 +554,10 @@ def perform_deploy(cmd_filename, repodir=None):
         else:
             done_editing = True
 
-    choice = prompt("Run these commands on %s? (Y/n) (answering 'No' will skip this node)" % (env.host_string, ), default="yes")
-    if choice.lower() not in ["y", "ye", "yes"]:
-        return []
+    if not env.noprompt:
+        choice = prompt("Run these commands on %s? (Y/n) (answering 'No' will skip this node)" % (env.host_string, ), default="yes")
+        if choice.lower() not in ["y", "ye", "yes"]:
+            return []
 
     current_directory = repodir
     executed_commands = []
@@ -566,6 +573,8 @@ def perform_deploy(cmd_filename, repodir=None):
                 _run_command(current_directory, command)
                 ping_host(env.host_string)
                 execute(enable, target)
+            elif env.noprompt and 'colordiff' in command:
+                pass
             else:
                 _run_command(current_directory, command)
             executed_commands.append(command)
