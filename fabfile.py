@@ -53,6 +53,8 @@ else:
     print("ERROR: NO EDITOR/VISUAL variable found. Exiting.")
     sys.exit(1)
 
+env.nokeys = True
+
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
@@ -463,8 +465,9 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
 
     # Logging?
     if env.dolog:
-        choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
-        if choice.lower() in ["y", "ye", "yes"]:
+        if not env.noprompt:
+            choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
+        if env.noprompt or choice.lower() in ["y", "ye", "yes"]:
             log_text = """
 Upgraded %(hosts)s to latest git master sources (using make).
 
@@ -521,8 +524,9 @@ def deploy(branch=None, commitid=None,
 
     # Logging?
     if env.dolog:
-        choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
-        if choice.lower() in ["y", "ye", "yes"]:
+        if not env.noprompt:
+            choice = prompt("Log this deploy to %s? (Y/n)" % (CFG_LOG_EMAIL,), default="yes")
+        if env.noprompt or choice.lower() in ["y", "ye", "yes"]:
             log_text = out.split("#+END_EXAMPLE")[0]
             log_filename = _safe_mkstemp()
             log_deploy(log_filename, executed_commands, log_text, CFG_LOG_EMAIL)
@@ -682,9 +686,10 @@ def disable(host):
 
     servername, backends = backends[server]
 
-    choice = prompt("Disable the following server? %s (Y/n)" % (servername, ), default="yes")
-    if choice.lower() not in ["y", "ye", "yes"]:
-        return
+    if not env.noprompt:
+        choice = prompt("Disable the following server? %s (Y/n)" % (servername, ), default="yes")
+        if choice.lower() not in ["y", "ye", "yes"]:
+            return
     proxy_action(servername, backends, action="disable")
 
 
@@ -718,9 +723,10 @@ def enable(host):
 
     servername, backends = backends[server]
 
-    choice = prompt("Enable the following server? %s (Y/n)" % (servername, ), default="yes")
-    if choice.lower() not in ["y", "ye", "yes"]:
-        return
+    if not env.noprompt:
+        choice = prompt("Enable the following server? %s (Y/n)" % (servername, ), default="yes")
+        if choice.lower() not in ["y", "ye", "yes"]:
+            return
     proxy_action(servername, backends, action="enable")
 
 
