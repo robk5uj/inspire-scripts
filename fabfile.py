@@ -67,6 +67,10 @@ env.roledefs = {
     'prod2': ['pcudssw1507.cern.ch'],
     'prod3': ['pcudssx1506.cern.ch'],
     'prod4': ['pcudssw1504.cern.ch'],
+    'newprod1': ['p05153026131444.cern.ch'],
+    'newprod2': ['p05153026376986.cern.ch'],
+    'newprod3': ['p05153026485494.cern.ch'],
+    'newprod4': ['p05153026581150.cern.ch'],
 }
 
 dev_backends = [
@@ -278,6 +282,18 @@ def prod4():
 
 
 @task
+def newprod4():
+    """
+    Activate configuration for INSPIRE PROD 4.
+    """
+    env.roles += ['newprod4']
+    env.roles_aux += ['newprod4']
+    env.dolog = False
+    env.branch = "prod"
+    env.graceful_reload = False
+
+
+@task
 def ops():
     """
     Activate configuration for INSPIRE PROD aux servers.
@@ -351,12 +367,49 @@ def install_jquery_plugins():
 
 
 @task
+def install_other_plugins():
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
+    apacheuser = run("echo $CFG_INVENIO_USER")
+
+    choice = prompt("Install other plugins? (y/N)", default="no")
+    if choice.lower() in ["y", "ye", "yes"]:
+        with cd(invenio_srcdir):
+            sudo("make -s install-mathjax-plugin", user=apacheuser)
+            sudo("make -s install-pdfa-helper-files", user=apacheuser)
+            sudo("make -s install-ckeditor-plugin", user=apacheuser)
+
+
+@task
+def install_solr_plugin():
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
+    apacheuser = run("echo $CFG_INVENIO_USER")
+
+    choice = prompt("Install Solr plugin? (y/N)", default="no")
+    if choice.lower() in ["y", "ye", "yes"]:
+        with cd(invenio_srcdir):
+            sudo("make -s install-solrutils", user=apacheuser)
+
+
+@task
 def autoconf():
     invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     config_cmd = "aclocal && automake -a && autoconf && ./configure prefix=%s" % (prefixdir,)
     with cd(invenio_srcdir):
         run(config_cmd)
+
+
+@task
+def bootstrap_invenio():
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
+    sudo("chgrp apache %s" % ("/opt",))
+    sudo("chmod g+w %s" % ("/opt",))
+    sudo("mkdir -p %s/lib/python/invenio" % (prefixdir,))
+    sudo("mkdir -p %s/var/apache" % (prefixdir,))
+    sudo("mkdir -p %s/var/www" % (prefixdir,))
+    sudo("chown -R apache %s" % (prefixdir,))
+    sudo("ln -s %s/lib/python/invenio /usr/lib64/python2.6/site-packages/invenio" % (prefixdir,))
+    sudo("ln -s %s/lib/python/invenio /usr/lib/python2.6/site-packages/invenio" % (prefixdir,))
 
 
 @task
@@ -369,7 +422,7 @@ def stop_bibsched():
 
 
 @task
-def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
+def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", bootstrap=False):
     """
     This task implement the recipe to re-install the server. Use the safe flag
     to disable bibsched on the node and to safely disable the node in haproxy
@@ -393,6 +446,9 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
 
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
+
+    if bootstrap:
+        bootstrap_invenio()
 
     recipe_text = """
     #+BEGIN_SRC sh
@@ -459,6 +515,7 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes"):
             res = execute(perform_deploy, cmd_filename, invenio_srcdir)
             executed_commands.update(res)
             install_jquery_plugins()
+            install_other_plugins()
             hosts_touched.append(host)
             ping_host(host)
             execute(enable, host)
