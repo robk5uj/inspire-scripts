@@ -71,6 +71,7 @@ env.roledefs = {
     'newprod2': ['p05153026376986.cern.ch'],
     'newprod3': ['p05153026485494.cern.ch'],
     'newprod4': ['p05153026581150.cern.ch'],
+    'newprod5': ['p05153026637155.cern.ch'],
 }
 
 dev_backends = [
@@ -229,6 +230,17 @@ def prod():
 
 
 @task
+def newprod():
+    """
+    Activate configuration for INSPIRE PROD main server.
+    """
+    env.roles = ['newprod3']
+    env.roles_aux = ['newprod3', 'newprod4', 'newprod5']
+    env.dolog = True
+    env.branch = "new-prod"
+    env.graceful_reload = True
+
+@task
 def proxy():
     env.hosts = env.roledefs['proxy']
 
@@ -282,12 +294,34 @@ def prod4():
 
 
 @task
+def newprod3():
+    """
+    Activate configuration for INSPIRE PROD 4.
+    """
+    env.roles += ['newprod3']
+    env.roles_aux += ['newprod3']
+    env.dolog = False
+    env.branch = "prod"
+    env.graceful_reload = False
+
+@task
 def newprod4():
     """
     Activate configuration for INSPIRE PROD 4.
     """
     env.roles += ['newprod4']
     env.roles_aux += ['newprod4']
+    env.dolog = False
+    env.branch = "prod"
+    env.graceful_reload = False
+
+@task
+def newprod5():
+    """
+    Activate configuration for INSPIRE PROD 4.
+    """
+    env.roles += ['newprod5']
+    env.roles_aux += ['newprod5']
     env.dolog = False
     env.branch = "prod"
     env.graceful_reload = False
