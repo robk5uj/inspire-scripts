@@ -67,10 +67,11 @@ env.roledefs = {
     'prod2': ['pcudssw1507.cern.ch'],
     'prod3': ['pcudssx1506.cern.ch'],
     'prod4': ['pcudssw1504.cern.ch'],
-    'newprod1': ['p05153026131444.cern.ch'],
-    'newprod2': ['p05153026376986.cern.ch'],
-    'newprod3': ['p05153026485494.cern.ch'],
-    'newprod4': ['p05153026581150.cern.ch'],
+    'inspire01': ['p05153026131444.cern.ch'],
+    'inspire02': ['p05153026376986.cern.ch'],
+    'inspire03': ['p05153026485494.cern.ch'],
+    'inspire04': ['p05153026581150.cern.ch'],
+    'inspire05': ['p05153026637155.cern.ch'],
 }
 
 dev_backends = [
@@ -282,14 +283,62 @@ def prod4():
 
 
 @task
-def newprod4():
+def inspire01():
     """
-    Activate configuration for INSPIRE PROD 4.
+    Activate configuration for INSPIRE 1.
     """
-    env.roles += ['newprod4']
-    env.roles_aux += ['newprod4']
+    env.roles += ['inspire01']
+    env.roles_aux += ['inspire01']
     env.dolog = False
-    env.branch = "prod"
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire02():
+    """
+    Activate configuration for INSPIRE 2.
+    """
+    env.roles += ['inspire02']
+    env.roles_aux += ['inspire02']
+    env.dolog = False
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire03():
+    """
+    Activate configuration for INSPIRE 2.
+    """
+    env.roles += ['inspire03']
+    env.roles_aux += ['inspire03']
+    env.dolog = False
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire04():
+    """
+    Activate configuration for INSPIRE 2.
+    """
+    env.roles += ['inspire04']
+    env.roles_aux += ['inspire04']
+    env.dolog = False
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire05():
+    """
+    Activate configuration for INSPIRE 5.
+    """
+    env.roles += ['inspire05']
+    env.roles_aux += ['inspire05']
+    env.dolog = False
+    env.branch = "prod-on-master"
     env.graceful_reload = False
 
 
@@ -351,8 +400,8 @@ def noprompt():
 # MAIN TASKS
 
 @task
-def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
-    makeinstall(opsbranch, inspirebranch, reload_apache)
+def mi(opsbranch=None, inspirebranch="master", reload_apache="yes", bootstrap=False):
+    makeinstall(opsbranch, inspirebranch, reload_apache, bootstrap)
 
 
 @task
