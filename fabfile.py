@@ -26,8 +26,12 @@ from fabric.api import (run,
 from fabric.operations import prompt, get, put
 from fabric.contrib.files import exists
 
-from invenio.mailutils import send_email
-from invenio.config import CFG_SITE_ADMIN_EMAIL
+try:
+    from invenio.mailutils import send_email
+    from invenio.config import CFG_SITE_ADMIN_EMAIL
+    CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
+except ImportError:
+    pass
 
 try:
     import fabric_config_local
@@ -38,7 +42,6 @@ else:
 
 CFG_LINES_TO_IGNORE = ("#", )
 CFG_CMDDIR = os.environ.get('TMPDIR', '/tmp')
-CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 CFG_LOG_EMAIL = "admin@inspirehep.net"
 CFG_INVENIO_DEPLOY_RECIPE = "/afs/cern.ch/project/inspire/repo/invenio-create-deploy-recipe"
 FABRIC_DEPLOYMENT_LOCK_SCRIPT_PATH = "/afs/cern.ch/project/inspire/repo/fabric_deployment_check_lock.py"
@@ -960,17 +963,20 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
         full_log = logs.readlines()
         subject = full_log[0]
         content = "".join(full_log[1:])
-        if send_email(fromaddr=CFG_FROM_EMAIL,
-                      toaddr=log_mail,
-                      subject=subject,
-                      content=content,
-                      header="",
-                      footer=""):
-            print "Email sent to %s" % (log_mail,)
-        else:
-            print "ERROR: Email not sent"
-            print subject
-            print content
+        try:
+            if send_email(fromaddr=CFG_FROM_EMAIL,
+                          toaddr=log_mail,
+                          subject=subject,
+                          content=content,
+                          header="",
+                          footer=""):
+                print "Email sent to %s" % (log_mail,)
+            else:
+                print "ERROR: Email not sent"
+                print subject
+                print content
+        except NameError:
+            pass
 
 
 @task
