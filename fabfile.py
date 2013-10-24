@@ -62,7 +62,8 @@ env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
     'prod_main': ['p05153026637155.cern.ch'],
-    'prod_aux': ['p05153026581150.cern.ch'],
+    'prod_aux': ['p05153026581150.cern.ch',
+                 'p05153026485494.cern.ch'],
     'proxy': ['pcudssw1503'],
     'prod1': ['pcudssw1506.cern.ch'],
     'prod2': ['pcudssw1507.cern.ch'],
@@ -223,7 +224,7 @@ def prod():
     Activate configuration for INSPIRE PROD main server.
     """
     env.roles = ['prod_main']
-    env.roles_aux = ['inspire04', 'inspire05']
+    env.roles_aux = ['inspire03', 'inspire04', 'inspire05']
     env.dolog = True
     env.branch = "prod"
     env.graceful_reload = True
