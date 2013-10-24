@@ -61,10 +61,8 @@ env.nokeys = True
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
-    'prod_main': ['pcudssw1506.cern.ch'],
-    'prod_aux': ['pcudssw1507.cern.ch',
-                 'pcudssx1506.cern.ch',
-                 'pcudssw1504.cern.ch'],
+    'prod_main': ['p05153026637155.cern.ch'],
+    'prod_aux': ['p05153026581150.cern.ch'],
     'proxy': ['pcudssw1503'],
     'prod1': ['pcudssw1506.cern.ch'],
     'prod2': ['pcudssw1507.cern.ch'],
@@ -99,10 +97,9 @@ prod_backends = [
 env.proxybackends = {
     'dev': ['pccis84', dev_backends],
     'test': ['pcudssw1505', test_backends],
-    'prod1': ['pcudssw1506', prod_backends],
-    'prod2': ['pcudssw1507', prod_backends],
-    'prod3': ['pcudssx1506', prod_backends],
-    'prod4': ['pcudssw1504', prod_backends],
+    'inspire03': ['p05153026485494', prod_backends],
+    'inspire04': ['p05153026581150', prod_backends],
+    'inspire05': ['p05153026637155', prod_backends],
 }
 
 
@@ -226,7 +223,7 @@ def prod():
     Activate configuration for INSPIRE PROD main server.
     """
     env.roles = ['prod_main']
-    env.roles_aux = ['prod1', 'prod2', 'prod3', 'prod4']
+    env.roles_aux = ['inspire04', 'inspire05']
     env.dolog = True
     env.branch = "prod"
     env.graceful_reload = True
@@ -709,8 +706,9 @@ def check_branch(base_branch, repodir=None):
                              base_branch)
         for filepath in files_to_check.split('\n'):
             if exists(filepath):
-                run("python modules/miscutil/lib/kwalitee.py --check-all %s" %
-                    (filepath, ), warn_only=True)
+                with settings(warn_only=True):
+                    run("python modules/miscutil/lib/kwalitee.py --check-all %s" %
+                        (filepath, ))
 
 
 @task
@@ -1044,7 +1042,8 @@ def _run_command(directory, command):
             if command.startswith(('colordiff', 'diff')):
                 with cd(directory):
                     with hide('warnings'):
-                        run(command, warn_only=True)
+                        with settings(warn_only=True):
+                            run(command)
                 prompt("Press Enter to continue..")
             else:
                 with cd(directory):
