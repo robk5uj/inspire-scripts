@@ -97,9 +97,9 @@ prod_backends = [
 env.proxybackends = {
     'dev': ['pccis84', dev_backends],
     'test': ['pcudssw1505', test_backends],
-    'inspire03': ['p05153026485494', prod_backends],
-    'inspire04': ['p05153026581150', prod_backends],
-    'inspire05': ['p05153026637155', prod_backends],
+    'inspire03': ['inspire03', prod_backends],
+    'inspire04': ['inspire04', prod_backends],
+    'inspire05': ['inspire05', prod_backends],
 }
 
 
