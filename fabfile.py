@@ -26,8 +26,12 @@ from fabric.api import (run,
 from fabric.operations import prompt, get, put
 from fabric.contrib.files import exists
 
-from invenio.mailutils import send_email
-from invenio.config import CFG_SITE_ADMIN_EMAIL
+try:
+    from invenio.mailutils import send_email
+    from invenio.config import CFG_SITE_ADMIN_EMAIL
+    CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
+except ImportError:
+    pass
 
 try:
     import fabric_config_local
@@ -38,7 +42,6 @@ else:
 
 CFG_LINES_TO_IGNORE = ("#", )
 CFG_CMDDIR = os.environ.get('TMPDIR', '/tmp')
-CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 CFG_LOG_EMAIL = "admin@inspirehep.net"
 CFG_INVENIO_DEPLOY_RECIPE = "/afs/cern.ch/project/inspire/repo/invenio-create-deploy-recipe"
 FABRIC_DEPLOYMENT_LOCK_SCRIPT_PATH = "/afs/cern.ch/project/inspire/repo/fabric_deployment_check_lock.py"
@@ -58,20 +61,18 @@ env.nokeys = True
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test': ['pcudssw1505.cern.ch'],
-    'prod_main': ['pcudssw1506.cern.ch'],
-    'prod_aux': ['pcudssw1507.cern.ch',
-                 'pcudssx1506.cern.ch',
-                 'pcudssw1504.cern.ch'],
+    'prod_main': ['p05153026637155.cern.ch'],
+    'prod_aux': ['p05153026581150.cern.ch'],
     'proxy': ['pcudssw1503'],
     'prod1': ['pcudssw1506.cern.ch'],
     'prod2': ['pcudssw1507.cern.ch'],
     'prod3': ['pcudssx1506.cern.ch'],
     'prod4': ['pcudssw1504.cern.ch'],
-    'newprod1': ['p05153026131444.cern.ch'],
-    'newprod2': ['p05153026376986.cern.ch'],
-    'newprod3': ['p05153026485494.cern.ch'],
-    'newprod4': ['p05153026581150.cern.ch'],
-    'newprod5': ['p05153026637155.cern.ch'],
+    'inspire01': ['p05153026131444.cern.ch'],
+    'inspire02': ['p05153026376986.cern.ch'],
+    'inspire03': ['p05153026485494.cern.ch'],
+    'inspire04': ['p05153026581150.cern.ch'],
+    'inspire05': ['p05153026637155.cern.ch'],
 }
 
 dev_backends = [
@@ -96,10 +97,9 @@ prod_backends = [
 env.proxybackends = {
     'dev': ['pccis84', dev_backends],
     'test': ['pcudssw1505', test_backends],
-    'prod1': ['pcudssw1506', prod_backends],
-    'prod2': ['pcudssw1507', prod_backends],
-    'prod3': ['pcudssx1506', prod_backends],
-    'prod4': ['pcudssw1504', prod_backends],
+    'inspire03': ['p05153026485494', prod_backends],
+    'inspire04': ['p05153026581150', prod_backends],
+    'inspire05': ['p05153026637155', prod_backends],
 }
 
 
@@ -223,22 +223,11 @@ def prod():
     Activate configuration for INSPIRE PROD main server.
     """
     env.roles = ['prod_main']
-    env.roles_aux = ['prod1', 'prod2', 'prod3', 'prod4']
+    env.roles_aux = ['inspire04', 'inspire05']
     env.dolog = True
     env.branch = "prod"
     env.graceful_reload = True
 
-
-@task
-def newprod():
-    """
-    Activate configuration for INSPIRE PROD main server.
-    """
-    env.roles = ['newprod3']
-    env.roles_aux = ['newprod3', 'newprod4', 'newprod5']
-    env.dolog = True
-    env.branch = "new-prod"
-    env.graceful_reload = True
 
 @task
 def proxy():
@@ -294,36 +283,62 @@ def prod4():
 
 
 @task
-def newprod3():
+def inspire01():
     """
-    Activate configuration for INSPIRE PROD 4.
+    Activate configuration for INSPIRE 1.
     """
-    env.roles += ['newprod3']
-    env.roles_aux += ['newprod3']
+    env.roles += ['inspire01']
+    env.roles_aux += ['inspire01']
     env.dolog = False
-    env.branch = "prod"
+    env.branch = "prod-on-master"
     env.graceful_reload = False
 
-@task
-def newprod4():
-    """
-    Activate configuration for INSPIRE PROD 4.
-    """
-    env.roles += ['newprod4']
-    env.roles_aux += ['newprod4']
-    env.dolog = False
-    env.branch = "prod"
-    env.graceful_reload = False
 
 @task
-def newprod5():
+def inspire02():
     """
-    Activate configuration for INSPIRE PROD 4.
+    Activate configuration for INSPIRE 2.
     """
-    env.roles += ['newprod5']
-    env.roles_aux += ['newprod5']
+    env.roles += ['inspire02']
+    env.roles_aux += ['inspire02']
     env.dolog = False
-    env.branch = "prod"
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire03():
+    """
+    Activate configuration for INSPIRE 2.
+    """
+    env.roles += ['inspire03']
+    env.roles_aux += ['inspire03']
+    env.dolog = False
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire04():
+    """
+    Activate configuration for INSPIRE 2.
+    """
+    env.roles += ['inspire04']
+    env.roles_aux += ['inspire04']
+    env.dolog = False
+    env.branch = "prod-on-master"
+    env.graceful_reload = False
+
+
+@task
+def inspire05():
+    """
+    Activate configuration for INSPIRE 5.
+    """
+    env.roles += ['inspire05']
+    env.roles_aux += ['inspire05']
+    env.dolog = False
+    env.branch = "prod-on-master"
     env.graceful_reload = False
 
 
@@ -385,8 +400,8 @@ def noprompt():
 # MAIN TASKS
 
 @task
-def mi(opsbranch=None, inspirebranch="master", reload_apache="yes"):
-    makeinstall(opsbranch, inspirebranch, reload_apache)
+def mi(opsbranch=None, inspirebranch="master", reload_apache="yes", bootstrap=False):
+    makeinstall(opsbranch, inspirebranch, reload_apache, bootstrap)
 
 
 @task
@@ -691,8 +706,9 @@ def check_branch(base_branch, repodir=None):
                              base_branch)
         for filepath in files_to_check.split('\n'):
             if exists(filepath):
-                run("python modules/miscutil/lib/kwalitee.py --check-all %s" %
-                    (filepath, ), warn_only=True)
+                with settings(warn_only=True):
+                    run("python modules/miscutil/lib/kwalitee.py --check-all %s" %
+                        (filepath, ))
 
 
 @task
@@ -945,17 +961,20 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
         full_log = logs.readlines()
         subject = full_log[0]
         content = "".join(full_log[1:])
-        if send_email(fromaddr=CFG_FROM_EMAIL,
-                      toaddr=log_mail,
-                      subject=subject,
-                      content=content,
-                      header="",
-                      footer=""):
-            print "Email sent to %s" % (log_mail,)
-        else:
-            print "ERROR: Email not sent"
-            print subject
-            print content
+        try:
+            if send_email(fromaddr=CFG_FROM_EMAIL,
+                          toaddr=log_mail,
+                          subject=subject,
+                          content=content,
+                          header="",
+                          footer=""):
+                print "Email sent to %s" % (log_mail,)
+            else:
+                print "ERROR: Email not sent"
+                print subject
+                print content
+        except NameError:
+            pass
 
 
 @task
@@ -1023,7 +1042,8 @@ def _run_command(directory, command):
             if command.startswith(('colordiff', 'diff')):
                 with cd(directory):
                     with hide('warnings'):
-                        run(command, warn_only=True)
+                        with settings(warn_only=True):
+                            run(command)
                 prompt("Press Enter to continue..")
             else:
                 with cd(directory):
