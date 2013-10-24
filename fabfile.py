@@ -289,9 +289,9 @@ def inspire01():
     """
     env.roles += ['inspire01']
     env.roles_aux += ['inspire01']
-    env.dolog = False
-    env.branch = "prod-on-master"
-    env.graceful_reload = False
+    env.dolog = True
+    env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -301,9 +301,9 @@ def inspire02():
     """
     env.roles += ['inspire02']
     env.roles_aux += ['inspire02']
-    env.dolog = False
-    env.branch = "prod-on-master"
-    env.graceful_reload = False
+    env.dolog = True
+    env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -313,9 +313,9 @@ def inspire03():
     """
     env.roles += ['inspire03']
     env.roles_aux += ['inspire03']
-    env.dolog = False
-    env.branch = "prod-on-master"
-    env.graceful_reload = False
+    env.dolog = True
+    env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -325,9 +325,9 @@ def inspire04():
     """
     env.roles += ['inspire04']
     env.roles_aux += ['inspire04']
-    env.dolog = False
-    env.branch = "prod-on-master"
-    env.graceful_reload = False
+    env.dolog = True
+    env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
@@ -337,9 +337,9 @@ def inspire05():
     """
     env.roles += ['inspire05']
     env.roles_aux += ['inspire05']
-    env.dolog = False
-    env.branch = "prod-on-master"
-    env.graceful_reload = False
+    env.dolog = True
+    env.branch = "prod"
+    env.graceful_reload = True
 
 
 @task
