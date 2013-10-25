@@ -47,6 +47,7 @@ CFG_INVENIO_DEPLOY_RECIPE = "/afs/cern.ch/project/inspire/repo/invenio-create-de
 FABRIC_DEPLOYMENT_LOCK_SCRIPT_PATH = "/afs/cern.ch/project/inspire/repo/fabric_deployment_check_lock.py"
 FABRIC_DEPLOYMENT_LOCK_PATH = "/afs/cern.ch/project/inspire/repo/fabric_deployment.lock"
 CFG_DEFAULT_RECIPE_ARGS = " --inspire --use-source --no-pull --via-filecopy"
+CFG_INVENIO_LOCAL="/afs/cern.ch/project/inspire/private/invenio-local.conf"
 
 if os.environ.get('EDITOR'):
     CFG_EDITOR = os.environ.get('EDITOR')
@@ -979,25 +980,28 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
 
 
 @task
-def edit_conf(update_config_py=True, reload_apache=False):
-    config_filename = None
+def edit_conf(update_config_py=True, reload_apache=None):
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
+    apacheuser = run("echo $CFG_INVENIO_USER")
+
+    config_filename = _safe_mkstemp()
+    get(remote_path=CFG_INVENIO_LOCAL,
+        local_path=config_filename)
+    local("%s %s" % (CFG_EDITOR, config_filename))
+
+    with settings(sudo_user=apacheuser):
+        put(config_filename, CFG_INVENIO_LOCAL, use_sudo=True)
+
+    if reload_apache is None:
+        if not env.noprompt:
+            choice = prompt("Restart Apache (Y/n)", default="yes")
+        if env.noprompt or choice.lower() in ["y", "ye", "yes"]:
+            reload_apache = 'yes'
+
     try:
         for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
             # For every host in defined role, perform deploy
             with settings(host_string=host):
-                prefixdir = run("echo $CFG_INVENIO_PREFIX")
-                remote_path = os.path.join(prefixdir, 'etc', 'invenio-local.conf')
-                apacheuser = run("echo $CFG_INVENIO_USER")
-
-                if config_filename is None:
-                    config_filename = _safe_mkstemp()
-                    get(remote_path=remote_path,
-                        local_path=config_filename)
-                    local("%s %s" % (CFG_EDITOR, config_filename))
-
-                with settings(sudo_user=apacheuser):
-                    put(config_filename, remote_path, use_sudo=True)
-
                 if update_config_py and update_config_py != 'no':
                     command = os.path.join(prefixdir, 'bin', 'inveniocfg')
                     command = "%s --update-config-py" % command
@@ -1006,10 +1010,12 @@ def edit_conf(update_config_py=True, reload_apache=False):
                 if reload_apache and reload_apache != 'no':
                     command = '/etc/init.d/httpd reload'
                     for target in env.roles:
-                        execute(disable, target)
+                        if env.graceful_reload is True:
+                            execute(disable, target)
                         sudo(command, user='root')
-                        ping_host(env.host_string)
-                        execute(enable, target)
+                        if env.graceful_reload is True:
+                            ping_host(env.host_string)
+                            execute(enable, target)
 
     finally:
         if config_filename:
