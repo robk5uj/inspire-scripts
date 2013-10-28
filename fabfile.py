@@ -999,9 +999,8 @@ def edit_conf(update_config_py=True, reload_apache=None):
             reload_apache = 'yes'
 
     try:
-        for host in chain.from_iterable(env.roledefs[role] for role in env.roles_aux):
-            # For every host in defined role, perform deploy
-            with settings(host_string=host):
+        for role in env.roles_aux:
+            with settings(roles=[role]):
                 if update_config_py and update_config_py != 'no':
                     command = os.path.join(prefixdir, 'bin', 'inveniocfg')
                     command = "%s --update-config-py" % command
@@ -1009,13 +1008,14 @@ def edit_conf(update_config_py=True, reload_apache=None):
 
                 if reload_apache and reload_apache != 'no':
                     command = '/etc/init.d/httpd reload'
-                    for target in env.roles:
-                        if env.graceful_reload is True:
-                            execute(disable, target)
-                        sudo(command, user='root')
-                        if env.graceful_reload is True:
-                            ping_host(env.host_string)
-                            execute(enable, target)
+                    assert len(env.roles) == 1
+                    target = env.roles[0]
+                    if env.graceful_reload is True:
+                        execute(disable, target)
+                    sudo(command, user='root')
+                    if env.graceful_reload is True:
+                        ping_host(env.host_string)
+                        execute(enable, target)
 
     finally:
         if config_filename:
