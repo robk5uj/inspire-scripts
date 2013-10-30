@@ -61,15 +61,12 @@ env.nokeys = True
 
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
-    'test': ['pcudssw1505.cern.ch'],
+    'test01': ['inspirevm06.cern.ch'],
+    'test02': ['inspirevm07.cern.ch'],
     'prod_main': ['p05153026637155.cern.ch'],
     'prod_aux': ['p05153026581150.cern.ch',
                  'p05153026485494.cern.ch'],
     'proxy': ['pcudssw1503'],
-    'prod1': ['pcudssw1506.cern.ch'],
-    'prod2': ['pcudssw1507.cern.ch'],
-    'prod3': ['pcudssx1506.cern.ch'],
-    'prod4': ['pcudssw1504.cern.ch'],
     'inspire01': ['p05153026131444.cern.ch'],
     'inspire02': ['p05153026376986.cern.ch'],
     'inspire03': ['p05153026485494.cern.ch'],
@@ -98,7 +95,7 @@ prod_backends = [
 
 env.proxybackends = {
     'dev': ['pccis84', dev_backends],
-    'test': ['pcudssw1505', test_backends],
+    'test': ['inspirevm06', test_backends],
     'inspire03': ['inspire03', prod_backends],
     'inspire04': ['inspire04', prod_backends],
     'inspire05': ['inspire05', prod_backends],
@@ -213,8 +210,8 @@ def test():
     """
     Activate configuration for INSPIRE TEST server.
     """
-    env.roles = ['test']
-    env.roles_aux = ['test']
+    env.roles = ['test01']
+    env.roles_aux = ['test01']
     env.dolog = False
     env.branch = "test"
 
@@ -234,54 +231,6 @@ def prod():
 @task
 def proxy():
     env.hosts = env.roledefs['proxy']
-
-
-@task
-def prod1():
-    """
-    Activate configuration for INSPIRE PROD 1.
-    """
-    env.roles += ['prod1']
-    env.roles_aux += ['prod1']
-    env.dolog = True
-    env.branch = "prod"
-    env.graceful_reload = True
-
-
-@task
-def prod2():
-    """
-    Activate configuration for INSPIRE PROD 2.
-    """
-    env.roles += ['prod2']
-    env.roles_aux += ['prod2']
-    env.dolog = True
-    env.branch = "prod"
-    env.graceful_reload = True
-
-
-@task
-def prod3():
-    """
-    Activate configuration for INSPIRE PROD 3.
-    """
-    env.roles += ['prod3']
-    env.roles_aux += ['prod3']
-    env.dolog = True
-    env.branch = "prod"
-    env.graceful_reload = True
-
-
-@task
-def prod4():
-    """
-    Activate configuration for INSPIRE PROD 4.
-    """
-    env.roles += ['prod4']
-    env.roles_aux += ['prod4']
-    env.dolog = True
-    env.branch = "prod"
-    env.graceful_reload = True
 
 
 @task
