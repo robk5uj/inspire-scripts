@@ -7,7 +7,7 @@ for recid in recids:
     try:
         last_updated = run_sql("SELECT last_updated FROM bibfmt WHERE id_bibrec=%s AND format='xm'", (recid, ), run_on_slave=True)[0][0]
         job_date = run_sql("SELECT max(job_date) FROM hstRECORD where id_bibrec=%s GROUP BY id_bibrec", (recid,), run_on_slave=True)[0][0]
-    except:
+    except IndexError:
         print "skipping %s" % recid
         continue
     if last_updated > job_date:

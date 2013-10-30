@@ -13,10 +13,10 @@ def all_recids(start=1):
     return xrange(start, max_id + 1)
 
 
-def loop(recids, callback):
+def loop(recids, callback, step=50):
     for done, recid in enumerate(recids):
         callback(recid)
-        if done % 50 == 0:
+        if done % step == 0:
             print 'done %s of %s' % (done + 1, len(recids))
 
 
