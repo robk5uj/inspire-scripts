@@ -29,9 +29,10 @@ from fabric.contrib.files import exists
 try:
     from invenio.mailutils import send_email
     from invenio.config import CFG_SITE_ADMIN_EMAIL
+    from invenio.shellutils import escape_shell_arg
     CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 except ImportError:
-    pass
+    print("WARNING: NO INVENIO INSTALLATION DETECTED. EMAILING IS DISABLED")
 
 try:
     import fabric_config_local
@@ -215,6 +216,27 @@ def test():
     env.roles_aux = ['test01']
     env.dolog = False
     env.branch = "test"
+
+    global run, env
+
+    def run(command, shell=True, pty=True):
+        """
+        Helper function.
+        Runs a command with SSH agent forwarding enabled.
+
+        Note:: Fabric (and paramiko) can't forward your SSH agent. 
+        This helper uses your system's ssh to do so.
+        """
+        from pprint import pprint
+        real_command = command
+        if shell:
+            cwd = env.get('cwd', '')
+            if cwd:
+                cwd = 'cd %s && ' % escape_shell_arg(cwd)
+            real_command = cwd + real_command
+        #print("[%s] run: %s" % (env.host_string, real_command))
+        print("[%s] run: %s" % (env.host_string, command))
+        local("ssh -A %s '%s'" % (env.host_string, real_command))
 
 
 @task
@@ -943,7 +965,6 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
 
 @task
 def edit_conf(update_config_py=True, reload_apache=None):
-    prefixdir = run("echo $CFG_INVENIO_PREFIX")
     apacheuser = run("echo $CFG_INVENIO_USER")
 
     config_filename = _safe_mkstemp()
@@ -963,26 +984,31 @@ def edit_conf(update_config_py=True, reload_apache=None):
     try:
         for role in env.roles_aux:
             with settings(roles=[role]):
+                assert len(env.roles) == 1
+                target = env.roles[0]
                 if update_config_py and update_config_py != 'no':
-                    command = os.path.join(prefixdir, 'bin', 'inveniocfg')
-                    command = "%s --update-config-py" % command
-                    sudo(command, user=apacheuser)
-
+                    execute(update_all)
                 if reload_apache and reload_apache != 'no':
                     command = '/etc/init.d/httpd reload'
-                    assert len(env.roles) == 1
-                    target = env.roles[0]
                     if env.graceful_reload is True:
                         execute(disable, target)
-                    sudo(command, user='root')
+                    execute(do_reload_apache)
                     if env.graceful_reload is True:
-                        ping_host(env.host_string)
+                        web_host = env.roledefs[target]
+                        execute(ping_host, web_host)
                         execute(enable, target)
 
     finally:
         if config_filename:
             os.unlink(config_filename)
 
+@task
+def update_all():
+    apacheuser = run("echo $CFG_INVENIO_USER")
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
+    command = os.path.join(prefixdir, 'bin', 'inveniocfg')
+    command = "%s --update-all" % command
+    sudo(command, user=apacheuser)
 
 
 # HELPER FUNCTIONS
