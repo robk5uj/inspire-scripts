@@ -72,6 +72,7 @@ env.roledefs = {
     'inspire03': ['p05153026485494.cern.ch'],
     'inspire04': ['p05153026581150.cern.ch'],
     'inspire05': ['p05153026637155.cern.ch'],
+    'inspirevm06': ['inspirevm06.cern.ch'],
 }
 
 dev_backends = [
@@ -224,6 +225,18 @@ def prod():
     env.roles = ['prod_main']
     env.roles_aux = ['inspire03', 'inspire04', 'inspire05']
     env.dolog = True
+    env.branch = "prod"
+    env.graceful_reload = True
+
+
+@task
+def mirror():
+    """
+    Activate configuration for INSPIRE PROD main server.
+    """
+    env.roles = ['inspirevm06']
+    env.roles_aux = ['inspirevm06']
+    env.dolog = False
     env.branch = "prod"
     env.graceful_reload = True
 
