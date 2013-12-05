@@ -26,7 +26,8 @@ def wait_for_task(task_id):
         time.sleep(5)
 
 
-def submit_bibupload_task(to_submit, mode, user, priority=3, notimechange=False):
+def submit_bibupload_task(to_submit, mode, user, priority=3,
+                          notimechange=False, name=None):
     # Save new record to file
     (temp_fd, temp_path) = mkstemp(prefix=user,
                                    dir=CFG_TMPSHAREDDIR)
@@ -43,24 +44,31 @@ def submit_bibupload_task(to_submit, mode, user, priority=3, notimechange=False)
             temp_path]
     if notimechange:
         args += ['--notimechange']
-
+    if name:
+        args += ['-N', name]
     return task_low_level_submission(*args)
 
 
-def submit_bibindex_task(to_update, indexes, user, priority=3):
+def submit_bibindex_task(to_update, indexes, user, priority=3, name=None):
     recids = [str(r) for r in to_update]
-    return task_low_level_submission('bibindex', user,
-                                     '-w', indexes,
-                                     '-P', str(priority),
-                                     '-i', ','.join(recids))
+    args = ['bibindex', user,
+            '-w', indexes,
+            '-P', str(priority),
+            '-i', ','.join(recids)]
+    if name:
+        args += ['-N', name]
+    return task_low_level_submission(*args)
 
 
-def submit_bibrank_task(to_update, methods, user, priority=3):
+def submit_bibrank_task(to_update, methods, user, priority=3, name=None):
     recids = [str(r) for r in to_update]
-    return task_low_level_submission('bibrank', user,
-                                     '-w', methods,
-                                     '-P', str(priority),
-                                     '-i', ','.join(recids))
+    args = ['bibrank', user,
+            '-w', methods,
+            '-P', str(priority),
+            '-i', ','.join(recids)]
+    if name:
+        args.extend(['-N', name])
+    return task_low_level_submission(*args)
 
 
 def submit_refextract_task(to_update, user, priority=3):
