@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+import requests
+import sys
+import os
+from urllib import urlencode, quote
+
+
+BASE_URL = 'https://jenkins.invenio-software.org'
+JOB_NAME = 'invenio-master-ondemand'
+REPO = 'personal/invenio-adeiana'
+USERNAME, PASSWORD = [line.split('=')[1].strip() for line in open(os.path.join(os.environ['HOME'], '.jenkins'))]
+print USERNAME
+print PASSWORD
+
+def submit_job(branch):
+    params = {'branch': quote(branch), 'repo': quote(REPO)}
+    data = 'name=MYREPO&value=%(repo)s&name=MYBRANCH&value=%(branch)s&name=MYBUILDMODE&value=complete&statusCode=303&redirectTo=.&json=%%7B%%22parameter%%22%%3A+%%5B%%7B%%22name%%22%%3A+%%22MYREPO%%22%%2C+%%22value%%22%%3A+%%22%(repo)s%%22%%7D%%2C+%%7B%%22name%%22%%3A+%%22MYBRANCH%%22%%2C+%%22value%%22%%3A+%%22%(branch)s%%22%%7D%%2C+%%7B%%22name%%22%%3A+%%22MYBUILDMODE%%22%%2C+%%22value%%22%%3A+%%22complete%%22%%7D%%5D%%2C+%%22statusCode%%22%%3A+%%22303%%22%%2C+%%22redirectTo%%22%%3A+%%22.%%22%%7D&Submit=Build' % params
+
+    url = "%s/job/%s/build" % (BASE_URL, JOB_NAME)
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    requests.post(url,
+                  data=data,
+                  verify=False,
+                  auth=(USERNAME, PASSWORD),
+                  headers=headers)
+
+
+def main(argv):
+    branch = argv[1].split('/')[2]
+    if branch == 'prod-for-master':
+        print 'Submitting build to Jenkins for branch %s' % branch
+        submit_job(branch)
+
+
+if __name__ == '__main__':
+    main(sys.argv)
