@@ -224,7 +224,7 @@ def test():
         Helper function.
         Runs a command with SSH agent forwarding enabled.
 
-        Note:: Fabric (and paramiko) can't forward your SSH agent. 
+        Note:: Fabric (and paramiko) can't forward your SSH agent.
         This helper uses your system's ssh to do so.
         """
         from pprint import pprint
@@ -995,7 +995,7 @@ def edit_conf(update_config_py=True, reload_apache=None):
                     execute(do_reload_apache)
                     if env.graceful_reload is True:
                         web_host = env.roledefs[target]
-                        execute(ping_host, web_host)
+                        execute(ping_host, web_host[0])
                         execute(enable, target)
 
     finally:
