@@ -63,7 +63,7 @@ env.nokeys = True
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test01': ['inspirevm06.cern.ch'],
-    'test02': ['inspirevm07.cern.ch'],
+    'test02': ['inspirevm12.cern.ch'],
     'prod_main': ['p05153026637155.cern.ch'],
     'prod_aux': ['p05153026581150.cern.ch',
                  'p05153026485494.cern.ch'],
@@ -217,7 +217,7 @@ def test():
     env.dolog = False
     env.branch = "test"
 
-    global run, env
+    global run, sudo
 
     def run(command, shell=True, pty=True):
         """
@@ -227,16 +227,23 @@ def test():
         Note:: Fabric (and paramiko) can't forward your SSH agent.
         This helper uses your system's ssh to do so.
         """
-        from pprint import pprint
         real_command = command
         if shell:
             cwd = env.get('cwd', '')
             if cwd:
                 cwd = 'cd %s && ' % escape_shell_arg(cwd)
             real_command = cwd + real_command
-        #print("[%s] run: %s" % (env.host_string, real_command))
         print("[%s] run: %s" % (env.host_string, command))
-        local("ssh -A %s '%s'" % (env.host_string, real_command))
+        return local("ssh -tA %s %s" % (env.host_string, escape_shell_arg(real_command))  , capture=not pty)
+
+    def sudo(cmd, user=None, shell=False):  # pylint: disable-msg=W0621,W0612
+        if user:
+            user_str = '-u %s ' % user
+        else:
+            user_str = ''
+        if shell:
+            cmd = 'bash -c "%s"'
+        return run('sudo %s%s' % (user_str, cmd))
 
 
 @task
@@ -392,8 +399,8 @@ def mi(opsbranch=None, inspirebranch="master", reload_apache="yes", bootstrap=Fa
 
 @task
 def install_jquery_plugins():
-    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
-    apacheuser = run("echo $CFG_INVENIO_USER")
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR", pty=False)
+    apacheuser = run("echo $CFG_INVENIO_USER", pty=False)
 
     choice = prompt("Install jquery-plugins? (y/N)", default="no")
     if choice.lower() in ["y", "ye", "yes"]:
@@ -403,8 +410,8 @@ def install_jquery_plugins():
 
 @task
 def install_other_plugins():
-    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
-    apacheuser = run("echo $CFG_INVENIO_USER")
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR", pty=False)
+    apacheuser = run("echo $CFG_INVENIO_USER", pty=False)
 
     choice = prompt("Install other plugins? (y/N)", default="no")
     if choice.lower() in ["y", "ye", "yes"]:
@@ -466,8 +473,8 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", boo
     if opsbranch is None:
         opsbranch = env.branch
 
-    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
-    inspire_srcdir = run("echo $CFG_INSPIRE_SRCDIR")
+    invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR", pty=False)
+    inspire_srcdir = run("echo $CFG_INSPIRE_SRCDIR", pty=False)
 
     choice = prompt("Do you want to fetch new branches? (Y/n)", default="yes")
     if choice.lower() in ["y", "ye", "yes"]:
@@ -479,8 +486,8 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", boo
     if choice.lower() in ["y", "ye", "yes"]:
         autoconf()
 
-    prefixdir = run("echo $CFG_INVENIO_PREFIX")
-    apacheuser = run("echo $CFG_INVENIO_USER")
+    prefixdir = run("echo $CFG_INVENIO_PREFIX", pty=False)
+    apacheuser = run("echo $CFG_INVENIO_USER", pty=False)
 
     if bootstrap:
         bootstrap_invenio()
