@@ -871,9 +871,9 @@ def proxy_action(server, backends, action="enable"):
         else:
             current_server_suffix = ''
         current_server = server + current_server_suffix
-        cmd = 'echo "%s server %s/%s" | sudo nc -U /var/lib/haproxy/stats' \
+        cmd = 'echo "%s server %s/%s" | nc -U /var/lib/haproxy/stats' \
                % (action, backend, current_server)
-        run(cmd)
+        sudo(cmd, shell=True)
 
 
 def ready_command_file(out):
@@ -971,7 +971,7 @@ def log_deploy(log_filename, executed_commands, log, log_mail):
 
 
 @task
-def edit_conf(update_config_py=True, reload_apache=None):
+def edit_conf(update_type='config', reload_apache=None):
     apacheuser = run("echo $CFG_INVENIO_USER")
 
     config_filename = _safe_mkstemp()
@@ -993,10 +993,11 @@ def edit_conf(update_config_py=True, reload_apache=None):
             with settings(roles=[role]):
                 assert len(env.roles) == 1
                 target = env.roles[0]
-                if update_config_py and update_config_py != 'no':
+                if update_type == 'all':
                     execute(update_all)
+                elif update_type == 'config':
+                    execute(update_config_py)
                 if reload_apache and reload_apache != 'no':
-                    command = '/etc/init.d/httpd reload'
                     if env.graceful_reload is True:
                         execute(disable, target)
                     execute(do_reload_apache)
@@ -1015,6 +1016,15 @@ def update_all():
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
     command = os.path.join(prefixdir, 'bin', 'inveniocfg')
     command = "%s --update-all" % command
+    sudo(command, user=apacheuser)
+
+
+@task
+def update_config_py():
+    apacheuser = run("echo $CFG_INVENIO_USER")
+    prefixdir = run("echo $CFG_INVENIO_PREFIX")
+    command = os.path.join(prefixdir, 'bin', 'inveniocfg')
+    command = "%s --update-config-py" % command
     sudo(command, user=apacheuser)
 
 
