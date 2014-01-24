@@ -67,7 +67,7 @@ env.roledefs = {
     'prod_main': ['p05153026637155.cern.ch'],
     'prod_aux': ['p05153026581150.cern.ch',
                  'p05153026485494.cern.ch'],
-    'proxy': ['pcudssw1503'],
+    'proxy': ['pcudssw1504'],
     'inspire01': ['p05153026131444.cern.ch'],
     'inspire02': ['p05153026376986.cern.ch'],
     'inspire03': ['p05153026485494.cern.ch'],
@@ -216,34 +216,6 @@ def test():
     env.roles_aux = ['test01']
     env.dolog = False
     env.branch = "test"
-
-    global run, sudo
-
-    def run(command, shell=True, pty=True):
-        """
-        Helper function.
-        Runs a command with SSH agent forwarding enabled.
-
-        Note:: Fabric (and paramiko) can't forward your SSH agent.
-        This helper uses your system's ssh to do so.
-        """
-        real_command = command
-        if shell:
-            cwd = env.get('cwd', '')
-            if cwd:
-                cwd = 'cd %s && ' % escape_shell_arg(cwd)
-            real_command = cwd + real_command
-        print("[%s] run: %s" % (env.host_string, command))
-        return local("ssh -tA %s %s" % (env.host_string, escape_shell_arg(real_command))  , capture=not pty)
-
-    def sudo(cmd, user=None, shell=False):  # pylint: disable-msg=W0621,W0612
-        if user:
-            user_str = '-u %s ' % user
-        else:
-            user_str = ''
-        if shell:
-            cmd = 'bash -c "%s"'
-        return run('sudo %s%s' % (user_str, cmd))
 
 
 @task
@@ -1093,3 +1065,8 @@ def _print_end_message():
     print("Remember to push the changes to the operations repository!")
     print("`$ git push origin prod` or `$ git push ops prod` etc.")
     print
+
+
+@task
+def afs_token():
+    run('aklog')
