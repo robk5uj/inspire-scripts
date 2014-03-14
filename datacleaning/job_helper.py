@@ -83,16 +83,18 @@ class ChunkedTask(object):
     chunk_size = 500
     submitter = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, wait_for_task=True, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
+        self.wait_for_task = wait_for_task
         self.to_submit = []
 
     def submit_task(self, to_submit):
         if self.submitter is None:
             raise Exception('Task submitter not defined')
         task_id = self.submitter(to_submit, *self.args, **self.kwargs)
-        wait_for_task(task_id)
+        if self.wait_for_task:
+            wait_for_task(task_id)
 
     def add(self, el):
         self.to_submit.append(el)

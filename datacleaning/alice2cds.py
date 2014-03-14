@@ -12,7 +12,7 @@ CFG_ALICE_MAP = loads(decompress(open("/afs/cern.ch/project/inspire/alice_map.bl
 
 recids = perform_request_search(p='8564_u:"http://alice.cern.ch/format/showfull?sysnb=*" and 8564_w:0->9"')
 
-bibupload = ChunkedBibUpload(mode='c', user="kaplun", name="alice2cds", notimechange=True, priority=-1)
+bibupload = ChunkedBibUpload(wait_for_task=False, mode='c', user="kaplun", name="alice2cds", notimechange=True)
 bibupload.chunk_size = 5000
 
 log = open(join(CFG_LOGDIR, "alice2cds.log"), "a")
@@ -20,7 +20,7 @@ tmp_output = open(join(CFG_LOGDIR, "alice2cds.xml"), "w")
 
 for i, recid in enumerate(recids):
     if i % 100 == 0:
-        print "%s%%" % (i * 100 / len(recids))
+        print "%s%%" % (i * 100 / len(recids)), i
     print >> log, "Processing record %s" % recid
     try:
         record = AmendableRecord(get_record(recid))
