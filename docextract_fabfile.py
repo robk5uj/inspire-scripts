@@ -41,6 +41,8 @@ def run_tests(revision):
                    CFG_INSPIRE_SRCDIR=inspire_src_dir,
                    CFG_INVENIO_PREFIX=invenio_prefix,
                    CFG_INVENIO_USER=invenio_user):
+
+        # Install
         print("Installing invenio from %s" % invenio_src_dir)
         with cd('src/invenio-vm'):
             run('make -s')
@@ -51,6 +53,12 @@ def run_tests(revision):
             sudo('make -s install', user=invenio_user)
         print("Recreating configuration file")
         sudo('%s/bin/inveniocfg --update-config-py' % invenio_prefix, user=invenio_user)
+
+        # Show installed revision to the user
         print("Currently deployed")
         with cd('src/invenio-vm'):
             run('git log HEAD~1..')
+
+        # Run tests
+        cmd = "python ~/scripts/test_refextract.py"
+        run('dtach -n `mktemp -u /tmp/refextract-tests-%s.XXXX` %s'  % (revision, cmd))
