@@ -216,6 +216,7 @@ def test():
     env.roles_aux = ['test01']
     env.dolog = False
     env.branch = "test"
+    # execute(afs_token)
 
 
 @task
@@ -1068,5 +1069,15 @@ def _print_end_message():
 
 
 @task
+def kdestroy():
+    run('kdestroy')
+
+
+@task
 def afs_token():
+    with settings(warn_only=True):
+        output = run('klist')
+    if 'klist: No credentials cache found' in output:
+        run('kinit')
     run('aklog')
+    run('source .bashrc', shell=True)
