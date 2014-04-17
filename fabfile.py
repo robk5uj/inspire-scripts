@@ -29,7 +29,6 @@ from fabric.contrib.files import exists
 try:
     from invenio.mailutils import send_email
     from invenio.config import CFG_SITE_ADMIN_EMAIL
-    from invenio.shellutils import escape_shell_arg
     CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 except ImportError:
     print("WARNING: NO INVENIO INSTALLATION DETECTED. EMAILING IS DISABLED")
@@ -63,7 +62,8 @@ env.nokeys = True
 env.roledefs = {
     'dev': ['pccis84.cern.ch'],
     'test01': ['inspirevm06.cern.ch'],
-    'test02': ['inspirevm12.cern.ch'],
+    # 'test02': ['inspirevm12.cern.ch'],
+    'test02': ['inspirevm16.cern.ch'],
     'prod_main': ['p05153026637155.cern.ch'],
     'prod_aux': ['p05153026581150.cern.ch',
                  'p05153026485494.cern.ch'],
@@ -216,7 +216,16 @@ def test():
     env.roles_aux = ['test01']
     env.dolog = False
     env.branch = "test"
-    # execute(afs_token)
+
+@task
+def test2():
+    """
+    Activate configuration for INSPIRE TEST server.
+    """
+    env.roles = ['test02']
+    env.roles_aux = ['test02']
+    env.dolog = False
+    env.branch = "test"
 
 
 @task
