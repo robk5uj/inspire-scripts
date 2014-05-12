@@ -31,7 +31,17 @@ try:
     from invenio.config import CFG_SITE_ADMIN_EMAIL
     CFG_FROM_EMAIL = CFG_SITE_ADMIN_EMAIL
 except ImportError:
-    print("WARNING: NO INVENIO INSTALLATION DETECTED. EMAILING IS DISABLED")
+    try:
+        from invenio.ext.email import send_email
+        from invenio.base.factory import with_app_context
+
+        @with_app_context()
+        def import_mail():
+            from invenio.base.globals import cfg
+            CFG_FROM_EMAIL = cfg['CFG_SITE_ADMIN_EMAIL']
+        import_mail()
+    except ImportError:
+        print("WARNING: NO INVENIO INSTALLATION DETECTED. EMAILING IS DISABLED")
 
 try:
     import fabric_config_local
@@ -60,7 +70,8 @@ else:
 env.nokeys = True
 
 env.roledefs = {
-    'dev': ['pccis84.cern.ch'],
+    'dev01': ['inspirevm08.cern.ch'],
+    'dev02': ['inspirevm11.cern.ch'],
     'test01': ['inspirevm06.cern.ch'],
     # 'test02': ['inspirevm12.cern.ch'],
     'test02': ['inspirevm16.cern.ch'],
@@ -96,7 +107,7 @@ prod_backends = [
                 ]
 
 env.proxybackends = {
-    'dev': ['pccis84', dev_backends],
+    'dev': ['inspirevm08', dev_backends],
     'test': ['inspirevm06', test_backends],
     'inspire03': ['inspire03', prod_backends],
     'inspire04': ['inspire04', prod_backends],
@@ -201,8 +212,8 @@ def dev():
     """
     Activate configuration for INSPIRE DEV server.
     """
-    env.roles = ['dev']
-    env.roles_aux = ['dev']
+    env.roles = ['dev01']
+    env.roles_aux = ['dev01']
     env.dolog = False
     env.branch = "dev"
 
@@ -493,7 +504,7 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", boo
     if 'dev' in env.roles:
         recipe_text += "sudo -u %s make reset-ugly-ui\n" % (apacheuser,)
 
-    if 'test' in env.roles:
+    if 'test01' in env.roles or 'test02' in env.roles:
         recipe_text += "sudo -u %s make reset-test-ui\n" % (apacheuser,)
 
     # Here we see if any of the current hosts are production machines, if so - special rules apply
