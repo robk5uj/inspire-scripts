@@ -9,7 +9,7 @@ from invenio.bibtask import task_low_level_submission
 def submit_task(to_submit):
     recids = ','.join(str(recid) for recid in to_submit)
     return task_low_level_submission('arxiv-pdf-checker', 'arxiv-pdf-check',
-                                     '-P', '3', '-%r', recids)
+                                     '-P', '3', '-i', recids)
 
 
 def wait_for_task(task_id):
@@ -26,7 +26,7 @@ def main():
         if count % 50 == 0:
             print 'done %s of %s' % (count, len(recids))
 
-        if not record_has_fulltext(recid):
+        if not record_has_fulltext(recid) and not run_sql('SELECT 1 FROM bibARXIVPDF WHERE id_bibrec = %s', [recid]):
             print 'adding', recid
             to_process.append(recid)
 
