@@ -66,6 +66,6 @@ if __name__ == "__main__":
         print """
         not enough arguments to work with, use as:
 
-        \t sys.argv[0] "<SPIRES style search string>"
+        \t %s "<SPIRES style search string>"
 
-        """
+        """ % sys.argv[0]
