@@ -342,6 +342,7 @@ def inspire():
     Activate configuration for INSPIRE PROD aux servers.
     """
     env.repodir = run("echo $CFG_INSPIRE_SRCDIR")
+    env.branch = "master"
 
 
 @task
