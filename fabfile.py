@@ -72,9 +72,8 @@ env.nokeys = True
 env.roledefs = {
     'dev01': ['inspirevm08.cern.ch'],
     'dev02': ['inspirevm11.cern.ch'],
-    'test01': ['inspirevm06.cern.ch'],
-    # 'test02': ['inspirevm12.cern.ch'],
-    'test02': ['inspirevm16.cern.ch'],
+    'test01': ['inspirevm16.cern.ch'],
+    'test02': ['inspirevm20.cern.ch'],
     'prod_main': ['p05153026637155.cern.ch'],
     'prod_aux': ['p05153026581150.cern.ch',
                  'p05153026485494.cern.ch'],
@@ -84,7 +83,6 @@ env.roledefs = {
     'inspire03': ['p05153026485494.cern.ch'],
     'inspire04': ['p05153026581150.cern.ch'],
     'inspire05': ['p05153026637155.cern.ch'],
-    'inspirevm06': ['inspirevm06.cern.ch'],
 }
 
 dev_backends = [
