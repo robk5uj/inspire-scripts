@@ -28,7 +28,7 @@ def main(exactauthor, days):
 
     result = citationloss(exactauthor, startdate)
     if result:
-        create_report(result)
+        create_report(result, days)
     else:
         print "nothing lost in the past %d days" % days
     print "\n* ALL DONE *\n"
@@ -41,28 +41,30 @@ def citationloss(exactauthor, startdate):
 
     recordsofauthor = search_unit(exactauthor, f='exactauthor')
     removedcitations = intbitset([i[0] for i in \
-                                  run_sql('select citee from rnkCITATIONLOG where action_date>"%s"' % startdate)])
+                                  run_sql('select citee from rnkCITATIONLOG where action_date>"%s" and type="removed"' % startdate)])
 
     lossoverlap = recordsofauthor & removedcitations
     if lossoverlap:
         recsaffected = run_sql(
             'select citer,citee,action_date from rnkCITATIONLOG' \
-            + ' where citee in (%s) and action_date>"%s"' \
+            + ' where citee in (%s) and action_date>"%s" and type="removed"' \
             % (', '.join([str(i) for i in lossoverlap]), startdate)
         )
         return recsaffected
     return None
 
-def create_report(recsaffected):
+def create_report(recsaffected, days):
     """
     print results in a nicely formatted form
     """
 
     srecsaffected = sorted(recsaffected, key=lambda k: k[2])
     print 'citer\tcitee\t   action_date\n' + '-'*40
+    count = 0
     for row in srecsaffected:
         print "%d\t%d\t%s" % row
-
+        count += 1
+    print "\n\n* total number of removed citations in the past %s days: %s *" % (days, count)
 
 if __name__ == "__main__":
     if len(sys.argv) > 2:
