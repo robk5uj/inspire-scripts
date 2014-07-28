@@ -234,7 +234,7 @@ def test2():
     env.roles = ['test02']
     env.roles_aux = ['test02']
     env.dolog = False
-    env.branch = "inspirevm16"
+    env.branch = "inspirevm20"
 
 
 @task
@@ -581,7 +581,6 @@ def deploy(branch=None, commitid=None,
     and recipe arguments given.
     """
     if branch is None:
-        print 'env.branch', env.branch
         branch = env.branch
 
     if repodir is None:
