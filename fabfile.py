@@ -106,7 +106,7 @@ prod_backends = [
 
 env.proxybackends = {
     'dev': ['inspirevm08', dev_backends],
-    'test': ['inspirevm06', test_backends],
+    'test': ['inspirevm16', test_backends],
     'inspire03': ['inspire03', prod_backends],
     'inspire04': ['inspire04', prod_backends],
     'inspire05': ['inspire05', prod_backends],
@@ -428,7 +428,7 @@ def install_solr_plugin():
 def autoconf():
     invenio_srcdir = run("echo $CFG_INVENIO_SRCDIR")
     prefixdir = run("echo $CFG_INVENIO_PREFIX")
-    config_cmd = "aclocal && automake -a && autoconf && ./configure prefix=%s" % (prefixdir,)
+    config_cmd = "aclocal && automake -a && autoconf && ./configure --prefix=%s" % (prefixdir,)
     with cd(invenio_srcdir):
         run(config_cmd)
 
@@ -496,15 +496,16 @@ def makeinstall(opsbranch=None, inspirebranch="master", reload_apache="yes", boo
 
     recipe_text += """
     cd %(inspiredir)s
-    sudo -u %(apache)s make -s install
+    sudo -u %(apache)s make -s install CFG_INVENIO_PREFIX=%(prefixdir)s
     """ % {'apache': apacheuser,
-           'inspiredir': inspire_srcdir}
+           'inspiredir': inspire_srcdir,
+           'prefixdir': prefixdir}
 
     if 'dev' in env.roles:
-        recipe_text += "sudo -u %s make reset-ugly-ui\n" % (apacheuser,)
+        recipe_text += "sudo -u %s make reset-ugly-ui CFG_INVENIO_PREFIX=%s\n" % (apacheuser, prefixdir)
 
     if 'test01' in env.roles or 'test02' in env.roles:
-        recipe_text += "sudo -u %s make reset-test-ui\n" % (apacheuser,)
+        recipe_text += "sudo -u %s make reset-test-ui CFG_INVENIO_PREFIX=%s\n" % (apacheuser, prefixdir)
 
     # Here we see if any of the current hosts are production machines, if so - special rules apply
     is_production_machine = bool([True for role in env.roles
