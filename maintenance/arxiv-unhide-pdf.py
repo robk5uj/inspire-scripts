@@ -1,16 +1,16 @@
 import sys
 
-from invenio.search_engine import search_pattern
+from invenio.search_engine import perform_request_search
 from invenio.bibdocfile import BibRecDocs
 
 
 def look_for_fulltext(recid):
     rec_info = BibRecDocs(recid)
-    docs = rec_info.list_bibdocs()
+    docs = rec_info.list_bibdocs('arXiv')
 
     def check_doc(doc):
-        for d in doc.list_all_files():
-            if d.get_format().strip('.') in ['pdf', 'pdfa', 'PDF']:
+        for d in doc.list_latest_files():
+            if d.get_format().strip('.') in ['pdf', 'pdfa', 'PDF', 'pdf;pdfa']:
                 return True
         return False
 
@@ -20,7 +20,7 @@ def look_for_fulltext(recid):
 if __name__ == '__main__':
     verbose = '-v' in sys.argv
 
-    recids = search_pattern(p='arxiv', f='reportnumber')
+    recids = perform_request_search(p='arXiv', f='037__9', cc='HEP')
 
     for count, recid in enumerate(recids):
         if count % 1000 == 0:
